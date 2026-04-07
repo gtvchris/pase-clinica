@@ -1,0 +1,2963 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Pase de Clínica</title>
+
+<!-- PWA: instalar como app en iPhone / Android / Mac -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Clínica">
+<meta name="application-name" content="Clínica">
+<meta name="theme-color" content="#1a4a8a">
+<meta name="description" content="Sistema de gestión de pase de clínica">
+
+<!-- Manifest inline via JS (evita archivo externo) -->
+<script>
+(function(){
+  var manifest = {
+    name: "Pase de Clínica",
+    short_name: "Clínica",
+    description: "Sistema de gestión de pase de clínica",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#f5f4f0",
+    theme_color: "#1a4a8a",
+    orientation: "any",
+    icons: [
+      { src: "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#1a4a8a"/><rect x="76" y="36" width="40" height="120" rx="8" fill="#fff"/><rect x="36" y="76" width="120" height="40" rx="8" fill="#fff"/></svg>'),
+        sizes: "192x192", type: "image/svg+xml" },
+      { src: "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#1a4a8a"/><rect x="200" y="96" width="112" height="320" rx="20" fill="#fff"/><rect x="96" y="200" width="320" height="112" rx="20" fill="#fff"/></svg>'),
+        sizes: "512x512", type: "image/svg+xml" }
+    ]
+  };
+  var blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  var url  = URL.createObjectURL(blob);
+  var link = document.createElement('link');
+  link.rel  = 'manifest';
+  link.href = url;
+  document.currentScript.parentNode.insertBefore(link, document.currentScript);
+})();
+</script>
+
+<!-- Apple touch icon (cruz médica azul) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a4a8a'/%3E%3Crect x='72' y='30' width='36' height='120' rx='8' fill='%23fff'/%3E%3Crect x='30' y='72' width='120' height='36' rx='8' fill='%23fff'/%3E%3C/svg%3E">
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: #d8d6cc;
+  --text: #1a1917;
+  --muted: #6b6a63;
+  --accent: #1a4a8a;
+  --accent-light: #e8eef7;
+  --danger: #9b2335;
+  --danger-light: #fdf0f2;
+  --warn: #8a5a00;
+  --warn-light: #fdf7e8;
+  --ok: #1a6b3a;
+  --ok-light: #edf7f1;
+  --libre: #888880;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--accent);
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.logo { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: 0.05em; opacity: 0.9; }
+.header-date { font-size: 12px; opacity: 0.65; font-family: var(--mono); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.user-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px;
+  font-size: 12px; font-weight: 500;
+}
+.user-avatar {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; font-family: var(--mono);
+}
+.save-btn {
+  background: #fff; color: var(--accent); border: none; border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--sans); transition: opacity 0.15s;
+}
+.save-btn:hover { opacity: 0.85; }
+.save-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 10px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); padding: 0 10px; height: 34px; flex: 1; max-width: 320px;
+}
+.search-box input {
+  border: none; background: transparent; font-size: 13px; color: var(--text);
+  outline: none; width: 100%; font-family: var(--sans);
+}
+.search-box svg { flex-shrink: 0; color: var(--muted); }
+.filter-group { display: flex; gap: 6px; }
+.filter-btn {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 6px;
+  padding: 0 12px; height: 34px; font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--sans); color: var(--muted); transition: all 0.15s; white-space: nowrap;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.stats-row { margin-left: auto; display: flex; gap: 16px; }
+.stat { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.stat strong { color: var(--text); font-weight: 600; }
+
+/* ── MAIN LAYOUT ── */
+.main { display: flex; height: calc(100vh - 52px - 54px); overflow: hidden; }
+
+/* ── SIDEBAR (wards) ── */
+.sidebar {
+  width: 200px; flex-shrink: 0;
+  background: var(--surface); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 0;
+}
+.ward-item {
+  padding: 9px 16px; cursor: pointer; font-size: 13px; font-weight: 500;
+  color: var(--muted); transition: all 0.1s; border-left: 3px solid transparent;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ward-item:hover { background: var(--bg); color: var(--text); }
+.ward-item.active { color: var(--accent); background: var(--accent-light); border-left-color: var(--accent); }
+.ward-count { font-family: var(--mono); font-size: 11px; background: var(--surface2); border-radius: 10px; padding: 1px 7px; }
+.ward-item.active .ward-count { background: var(--accent); color: #fff; }
+.sidebar-label { padding: 14px 16px 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+/* ── PATIENT LIST ── */
+.list-pane {
+  width: 300px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto; background: var(--surface2);
+}
+.patient-card {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.1s;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.patient-card:hover { background: var(--surface); }
+.patient-card.active { background: var(--accent-light); border-left: 3px solid var(--accent); }
+.patient-card.libre { opacity: 0.5; }
+.patient-cama { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.04em; }
+.patient-name { font-weight: 600; font-size: 13px; line-height: 1.3; }
+.patient-diag { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag-row { display: flex; gap: 4px; margin-top: 2px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; font-family: var(--mono); }
+.tag-atb { background: #fff3cd; color: #856404; }
+.tag-alergia { background: #fce8e8; color: #9b2335; }
+.tag-libre { background: #ececec; color: #888; }
+.tag-pendiente { background: #e8f4fd; color: #0a558c; }
+
+/* ── DETAIL PANE ── */
+.detail-pane {
+  flex: 1; overflow-y: auto; padding: 24px 28px;
+  background: var(--bg);
+}
+.detail-empty {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 13px; flex-direction: column; gap: 8px;
+}
+.detail-empty svg { opacity: 0.3; }
+
+/* Patient header */
+.detail-header {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 24px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start;
+}
+.det-cama { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.det-name { font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+.det-meta { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+.det-meta span { display: flex; align-items: center; gap: 3px; }
+.header-actions { display: flex; gap: 8px; align-items: flex-start; }
+.btn-edit {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--sans); color: var(--text); transition: all 0.15s;
+}
+.btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+.btn-hist {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--sans); color: var(--muted); transition: all 0.15s;
+}
+.btn-hist:hover { background: var(--surface2); }
+
+/* Fields grid */
+.fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.field-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+}
+.field-block.full { grid-column: 1 / -1; }
+.field-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.field-value { font-size: 13px; line-height: 1.5; color: var(--text); }
+.field-value.alergia { color: var(--danger); font-weight: 600; }
+.field-value.atb { color: var(--accent); }
+.field-edit {
+  width: 100%; border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px;
+  font-size: 13px; font-family: var(--sans); background: var(--bg); color: var(--text);
+  outline: none; resize: vertical; min-height: 60px; transition: border-color 0.15s;
+}
+.field-edit:focus { border-color: var(--accent); }
+.field-edit.single { min-height: unset; height: 34px; resize: none; }
+
+/* Novedades / historial */
+.novedades-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 16px;
+}
+.novedades-title { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.novedad-entry { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.novedad-entry:last-child { border-bottom: none; padding-bottom: 0; }
+.novedad-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+.novedad-text { font-size: 13px; line-height: 1.5; }
+.novedad-meta { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+/* Historial modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border-radius: 12px; width: 560px; max-width: 96vw;
+  max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;
+  transform: translateY(8px); transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-title { font-weight: 600; font-size: 15px; }
+.modal-close { border: none; background: none; font-size: 18px; cursor: pointer; color: var(--muted); padding: 0 4px; }
+.modal-body { overflow-y: auto; padding: 16px 20px; flex: 1; }
+.hist-entry {
+  padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; gap: 14px;
+}
+.hist-entry:last-child { border-bottom: none; }
+.hist-time { font-family: var(--mono); font-size: 11px; color: var(--muted); min-width: 90px; padding-top: 2px; }
+.hist-content { flex: 1; }
+.hist-field { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 3px; }
+.hist-before { font-size: 12px; color: var(--danger); text-decoration: line-through; }
+.hist-after { font-size: 12px; color: var(--ok); }
+.hist-user { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* Notification toast */
+.toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 300;
+  background: var(--text); color: #fff; border-radius: 8px;
+  padding: 10px 16px; font-size: 13px; font-weight: 500;
+  transform: translateY(60px); opacity: 0; transition: all 0.25s;
+  pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+.btn-libre {
+  border: 1px solid var(--libre); background: var(--bg); border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--sans); color: var(--libre); transition: all 0.15s;
+}
+.btn-libre:hover { background: #f0efe9; border-color: #555; color: var(--text); }
+.btn-ocupar {
+  border: 1px solid var(--ok); background: var(--ok-light); border-radius: 6px;
+  padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--sans); color: var(--ok); transition: all 0.15s;
+}
+.btn-ocupar:hover { background: #d0eedd; }
+
+/* Confirm overlay */
+.confirm-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 250;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+}
+.confirm-overlay.open { opacity: 1; pointer-events: all; }
+.confirm-box {
+  background: var(--surface); border-radius: 10px; padding: 24px 28px;
+  width: 380px; max-width: 92vw; transform: translateY(6px); transition: transform 0.18s;
+}
+.confirm-overlay.open .confirm-box { transform: translateY(0); }
+.confirm-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.confirm-body { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.confirm-cancel {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 6px;
+  padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: var(--sans); color: var(--muted);
+}
+.confirm-ok {
+  border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px;
+  font-weight: 600; cursor: pointer; font-family: var(--sans);
+}
+.confirm-ok.danger { background: var(--danger); color: #fff; }
+.confirm-ok.ok { background: var(--ok); color: #fff; }
+
+.log-btn {
+  background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: var(--sans); transition: background 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.log-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Log modal */
+.log-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 220;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.log-overlay.open { opacity: 1; pointer-events: all; }
+.log-modal {
+  background: var(--surface); border-radius: 12px;
+  width: 860px; max-width: 97vw; max-height: 88vh;
+  display: flex; flex-direction: column;
+  transform: translateY(10px); transition: transform 0.2s;
+}
+.log-overlay.open .log-modal { transform: translateY(0); }
+.log-modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.log-modal-title { font-weight: 600; font-size: 15px; }
+.log-modal-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.log-toolbar {
+  padding: 10px 20px; border-bottom: 1px solid var(--border);
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0;
+  background: var(--surface2);
+}
+.log-filter-select {
+  padding: 5px 9px; font-size: 12px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--surface); font-family: var(--sans);
+  color: var(--text); outline: none; cursor: pointer;
+}
+.log-search {
+  flex: 1; min-width: 140px; padding: 5px 9px; font-size: 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); font-family: var(--sans); color: var(--text); outline: none;
+}
+.log-search:focus, .log-filter-select:focus { border-color: var(--accent); }
+.log-dl-group { margin-left: auto; display: flex; gap: 6px; }
+.dl-btn {
+  padding: 5px 11px; font-size: 12px; font-weight: 500; border-radius: 6px;
+  cursor: pointer; font-family: var(--sans); transition: all 0.15s; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+}
+.dl-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.log-body { overflow-y: auto; flex: 1; }
+.log-empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13px; }
+.log-count { font-size: 11px; color: var(--muted); padding: 6px 20px; background: var(--surface2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+
+/* Log table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.log-table th {
+  text-align: left; padding: 8px 14px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 1;
+}
+.log-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.4; }
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tr:hover td { background: var(--surface2); }
+.log-type-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 3px;
+  font-size: 10px; font-weight: 600; font-family: var(--mono); white-space: nowrap;
+}
+.badge-edit    { background: var(--accent-light); color: var(--accent); }
+.badge-libre   { background: #ececec; color: #555; }
+.badge-ocupada { background: var(--ok-light); color: var(--ok); }
+.badge-traslado{ background: #f0e8fd; color: #5a2d8a; }
+.badge-visita  { background: #e6f7ed; color: #1a6b3a; }
+.log-val-before { color: var(--danger); font-size: 11px; font-family: var(--mono); }
+.log-val-after  { color: var(--ok);     font-size: 11px; font-family: var(--mono); }
+  border: 1px solid var(--accent); background: var(--accent-light); border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: var(--sans); color: var(--accent); transition: all 0.15s;
+}
+.btn-trasladar:hover { background: #d4e3f5; }
+
+/* Traslado modal */
+.traslado-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 210;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+}
+.traslado-overlay.open { opacity: 1; pointer-events: all; }
+.traslado-modal {
+  background: var(--surface); border-radius: 12px; width: 480px; max-width: 96vw;
+  transform: translateY(8px); transition: transform 0.18s; overflow: hidden;
+}
+.traslado-overlay.open .traslado-modal { transform: translateY(0); }
+.traslado-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.traslado-body { padding: 20px; }
+.traslado-from {
+  background: var(--surface2); border-radius: 8px; padding: 12px 14px; margin-bottom: 4px; font-size: 13px;
+}
+.traslado-from-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+.traslado-arrow { display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--muted); margin: 10px 0 4px; }
+.traslado-selects { display: flex; flex-direction: column; gap: 10px; }
+.traslado-select-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+.traslado-select {
+  width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg); font-family: var(--sans); color: var(--text);
+  outline: none; cursor: pointer; transition: border-color 0.15s;
+}
+.traslado-select:focus { border-color: var(--accent); }
+.traslado-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.traslado-preview {
+  background: var(--accent-light); border: 1px solid #b8cfe8; border-radius: 8px;
+  padding: 10px 14px; margin-top: 14px; font-size: 13px; color: var(--accent); display: none;
+}
+.traslado-preview.visible { display: block; }
+.traslado-warn {
+  background: var(--warn-light); border: 1px solid #e8c97a; border-radius: 8px;
+  padding: 10px 14px; margin-top: 14px; font-size: 13px; color: var(--warn); display: none;
+}
+.traslado-warn.visible { display: block; }
+
+/* Sin visita card highlight */
+.card-sinvisita { border-left: 3px solid var(--warn) !important; }
+.tag-visitado  { background: #e6f7ed; color: #1a6b3a; }
+.tag-sinvisita { background: var(--warn-light); color: var(--warn); }
+
+/* Visita bar in detail */
+.visita-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-radius: 8px; margin-bottom: 14px;
+  font-size: 13px; gap: 12px;
+}
+.visita-bar--ok      { background: var(--ok-light);  border: 1px solid #a8ddb8; }
+.visita-bar--pending { background: var(--warn-light); border: 1px solid #e8c97a; }
+.visita-bar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+.visita-icon {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--ok);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.visita-icon--warn { background: var(--warn); }
+.btn-visita {
+  border: none; background: var(--ok); color: #fff;
+  border-radius: 6px; padding: 5px 13px; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: var(--sans); white-space: nowrap; transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.btn-visita:hover { opacity: 0.85; }
+.btn-visita--done {
+  background: transparent; color: var(--ok); border: 1px solid var(--ok);
+}
+.btn-visita--done:hover { background: var(--ok-light); opacity: 1; }
+
+/* Usuario row in admin panel */
+.u-input {
+  width: 100%; padding: 6px 9px; font-size: 13px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--surface); font-family: var(--sans);
+  color: var(--text); outline: none; transition: border-color 0.15s;
+}
+.u-input:focus { border-color: var(--accent); }
+.u-submit-btn {
+  background: var(--accent); color: #fff; border: none; border-radius: 6px;
+  padding: 6px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans);
+  transition: opacity 0.15s;
+}
+.u-submit-btn:hover { opacity: 0.85; }
+.u-cancel-btn {
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: var(--sans);
+}
+.u-cancel-btn:hover { color: var(--text); }
+.u-btn-reset {
+  font-size: 11px; font-weight: 500; border: 1px solid var(--warn);
+  background: var(--warn-light); border-radius: 5px; padding: 3px 9px;
+  cursor: pointer; font-family: var(--sans); color: var(--warn); transition: all 0.12s;
+}
+.u-btn-reset:hover { background: #f5e8b0; }
+.u-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.u-row:last-child { border-bottom: none; }
+.u-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; font-family: var(--mono);
+  background: var(--accent-light); color: var(--accent);
+}
+.u-avatar.inactive { background: var(--surface2); color: var(--muted); }
+.u-info { flex: 1; min-width: 0; }
+.u-name { font-weight: 600; font-size: 13px; }
+.u-name.inactive { color: var(--muted); text-decoration: line-through; }
+.u-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.role-badge {
+  font-size: 10px; font-weight: 600; font-family: var(--mono);
+  padding: 2px 7px; border-radius: 3px; white-space: nowrap;
+}
+.role-admin     { background: #f0e8fd; color: #5a2d8a; }
+.role-medico    { background: var(--accent-light); color: var(--accent); }
+.role-enfermeria{ background: #e8f4fd; color: #0a6080; }
+.u-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.u-btn {
+  font-size: 11px; font-weight: 500; border: 1px solid var(--border);
+  background: var(--bg); border-radius: 5px; padding: 3px 9px;
+  cursor: pointer; font-family: var(--sans); color: var(--muted); transition: all 0.12s;
+}
+.u-btn:hover { border-color: var(--accent); color: var(--accent); }
+.u-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.u-btn.toggle-active { color: var(--ok); border-color: var(--ok); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── PANTALLA DE LOGIN ───────────────────────────────────────────── */
+#login-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--accent);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+#login-screen.hidden {
+  opacity: 0; transform: scale(1.04); pointer-events: none;
+}
+.login-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.25);
+}
+.login-logo {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-bottom: 28px;
+}
+.login-logo-icon {
+  width: 44px; height: 44px; background: var(--accent);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+}
+.login-logo-text { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text); }
+.login-logo-sub  { font-size: 11px; color: var(--muted); }
+.login-field { margin-bottom: 14px; }
+.login-label {
+  display: block; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); margin-bottom: 6px;
+}
+.login-input {
+  width: 100%; padding: 11px 14px; font-size: 15px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  background: var(--bg); font-family: var(--sans); color: var(--text);
+  outline: none; transition: border-color .15s;
+  -webkit-appearance: none;
+}
+.login-input:focus { border-color: var(--accent); }
+.login-btn {
+  width: 100%; padding: 13px; font-size: 15px; font-weight: 600;
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  cursor: pointer; font-family: var(--sans); margin-top: 6px;
+  transition: opacity .15s; -webkit-tap-highlight-color: transparent;
+}
+.login-btn:hover { opacity: .88; }
+.login-btn:active { opacity: .75; }
+.login-btn:disabled { opacity: .45; cursor: default; }
+.login-error {
+  font-size: 13px; color: var(--danger);
+  min-height: 20px; margin-top: 10px; text-align: center;
+}
+.login-lockout {
+  font-size: 12px; color: var(--warn);
+  text-align: center; margin-top: 8px;
+}
+
+/* Ocultar app hasta que haya login */
+#app-shell { opacity: 0; pointer-events: none; transition: opacity .3s; }
+#app-shell.visible { opacity: 1; pointer-events: all; }
+@media (max-width: 768px) {
+
+  /* Header compacto */
+  .header { height: 48px; padding: 0 12px; }
+  .logo { font-size: 11px; }
+  .header-date { display: none; }
+  .log-btn { font-size: 11px; padding: 4px 8px; }
+  .save-btn { font-size: 11px; padding: 4px 8px; }
+
+  /* Toolbar compacto */
+  .toolbar { padding: 8px 12px; gap: 8px; }
+  .search-box { max-width: 100%; }
+  .filter-group { display: none; } /* reemplazado por bottom bar */
+  .stats-row { display: none; }
+
+  /* Layout móvil: vistas apiladas */
+  .main {
+    flex-direction: column;
+    height: calc(100vh - 48px - 50px - 60px); /* header + toolbar + bottom-bar */
+    overflow: hidden;
+  }
+
+  /* Sidebar oculto — reemplazado por bottom sheet y bottom bar */
+  .sidebar { display: none; }
+
+  /* Lista ocupa todo el ancho */
+  .list-pane {
+    width: 100%;
+    flex: 1;
+    display: block;
+  }
+
+  /* Detalle — overlay deslizable encima de la lista */
+  .detail-pane {
+    display: block !important;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 60px;
+    background: var(--bg);
+    z-index: 50;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+    padding: 12px 14px 20px;
+  }
+  .detail-pane.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Detail header adaptado */
+  .detail-header {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .det-name { font-size: 17px; }
+  .header-actions {
+    display: flex; flex-wrap: wrap; gap: 6px; width: 100%;
+  }
+  .header-actions button { font-size: 11px; padding: 5px 10px; }
+
+  /* Fields grid: 1 columna */
+  .fields-grid { grid-template-columns: 1fr; }
+
+  /* Visita bar compacta */
+  .visita-bar { flex-wrap: wrap; gap: 8px; }
+
+  /* Back button (solo mobile) */
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: var(--sans);
+    padding: 8px 0 12px;
+    margin-bottom: 4px;
+  }
+
+  /* Patient card más compacto en mobile */
+  .patient-card { padding: 10px 14px; }
+  .patient-name { font-size: 14px; }
+}
+
+/* Bottom bar — solo mobile */
+.bottom-bar {
+  display: none;
+}
+@media (max-width: 768px) {
+  .bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .bb-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; background: none; border: none; cursor: pointer;
+    font-family: var(--sans); color: var(--muted); font-size: 10px;
+    font-weight: 500; padding: 6px 10px; border-radius: 8px;
+    flex: 1; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .bb-btn.active { color: var(--accent); background: var(--accent-light); }
+  .bb-btn svg { width: 20px; height: 20px; }
+  .bb-btn span { font-size: 10px; }
+
+  /* Session selector in bottom sheet */
+  .mobile-session-sheet {
+    position: fixed;
+    bottom: 60px; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    padding: 16px 20px 20px;
+    z-index: 90;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.12);
+  }
+  .mobile-session-sheet.open {
+    transform: translateY(0);
+  }
+  .sheet-handle {
+    width: 36px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 0 auto 16px; display: block;
+  }
+  .sheet-title {
+    font-size: 15px; font-weight: 600; margin-bottom: 14px;
+  }
+
+  /* Filter sheet */
+  .mobile-filter-sheet {
+    position: fixed;
+    bottom: 60px; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    padding: 16px 20px 20px;
+    z-index: 90;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.12);
+  }
+  .mobile-filter-sheet.open { transform: translateY(0); }
+  .mobile-filter-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+  }
+  .mobile-filter-chip {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-weight: 500; background: var(--bg);
+    color: var(--muted); cursor: pointer; text-align: center;
+    font-family: var(--sans); -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s;
+  }
+  .mobile-filter-chip.active {
+    border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+  }
+  .sheet-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 89;
+    background: rgba(0,0,0,.3);
+  }
+  .sheet-overlay.open { display: block; }
+
+  /* Main needs padding for bottom bar + safe area */
+  body { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .bottom-bar {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  .main {
+    height: calc(100vh - 48px - 50px - 60px - env(safe-area-inset-bottom, 0px));
+  }
+  .detail-pane {
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-session-sheet, .mobile-filter-sheet {
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ── PANTALLA DE LOGIN ────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+          <path d="M12 2v20M2 12h20"/>
+        </svg>
+      </div>
+      <div>
+        <div class="login-logo-text">PASE DE CLÍNICA</div>
+        <div class="login-logo-sub">Sistema de gestión</div>
+      </div>
+    </div>
+
+    <div class="login-field">
+      <label class="login-label" for="ls-user">Usuario</label>
+      <select id="ls-user" class="login-input" style="cursor:pointer;" onchange="onLoginUserChange()">
+        <option value="">— Seleccionar —</option>
+      </select>
+    </div>
+
+    <div class="login-field">
+      <label class="login-label" for="ls-pass">Contraseña</label>
+      <input id="ls-pass" type="password" class="login-input"
+        placeholder="Ingresá tu contraseña"
+        onkeydown="if(event.key==='Enter') doLogin()"
+        autocomplete="current-password">
+    </div>
+
+    <button id="ls-btn" class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="ls-error"></div>
+    <div class="login-lockout" id="ls-lockout"></div>
+  </div>
+</div>
+
+<!-- ── APP (oculta hasta login) ─────────────────────────────────── -->
+<div id="app-shell">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">◼ PASE DE CLÍNICA</div>
+    <div class="header-date" id="header-date"></div>
+  </div>
+  <div class="header-right">
+    <div class="user-badge" style="cursor:default;">
+      <div class="user-avatar" id="user-initials">—</div>
+      <span id="user-name-display">Sin sesión</span>
+    </div>
+    <button id="logout-btn" onclick="applyLogout()" title="Cerrar sesión"
+      style="display:none;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans);">
+      Cerrar sesión
+    </button>
+    <button class="log-btn" onclick="showLog()">Log del día</button>
+    <button class="save-btn" id="save-btn" onclick="saveChanges()" disabled>Guardar cambios</button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="search-box">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="search-input" placeholder="Buscar paciente, diagnóstico, medicación..." oninput="filterPatients()">
+  </div>
+  <div class="filter-group">
+    <button class="filter-btn active" onclick="setFilter('todos', this)">Todos</button>
+    <button class="filter-btn" onclick="setFilter('ocupadas', this)">Ocupadas</button>
+    <button class="filter-btn" onclick="setFilter('libres', this)">Libres</button>
+    <button class="filter-btn" onclick="setFilter('atb', this)">Con antibióticos</button>
+    <button class="filter-btn" onclick="setFilter('pendientes', this)">Con pendientes</button>
+    <button class="filter-btn" onclick="setFilter('sinvisita', this)">Sin visita hoy</button>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><strong id="stat-total">0</strong> camas</div>
+    <div class="stat"><strong id="stat-ocu">0</strong> ocupadas</div>
+    <div class="stat"><strong id="stat-libre">0</strong> libres</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-label">Servicios</div>
+    <div class="ward-item active" onclick="setWard('todos', this)">
+      <span>Todos</span><span class="ward-count" id="wc-todos">0</span>
+    </div>
+    <div class="ward-item" onclick="setWard('piso1', this)">
+      <span>1° Piso</span><span class="ward-count" id="wc-piso1">0</span>
+    </div>
+    <div class="ward-item" onclick="setWard('uco', this)">
+      <span>UCO</span><span class="ward-count" id="wc-uco">0</span>
+    </div>
+    <div class="ward-item" onclick="setWard('obs', this)">
+      <span>Observación</span><span class="ward-count" id="wc-obs">0</span>
+    </div>
+    <div class="ward-item" onclick="setWard('pb', this)">
+      <span>Planta Baja</span><span class="ward-count" id="wc-pb">0</span>
+    </div>
+
+    <div class="sidebar-label" style="margin-top:12px">Sesión</div>
+    <div style="padding: 8px 12px; display:flex; flex-direction:column; gap:6px;">
+      <select id="user-select" onchange="requestLogin()" style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); font-family:var(--sans); cursor:pointer; color:var(--text);">
+        <option value="">— Seleccionar —</option>
+      </select>
+      <button onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;">⚙ Administrar usuarios</button>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="list-pane" id="list-pane"></div>
+
+  <!-- DETAIL -->
+  <div class="detail-pane" id="detail-pane">
+    <div class="detail-empty">
+      <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg>
+      <span>Seleccioná una cama para ver el detalle</span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#app-shell -->
+
+<!-- MODALS (fuera de app-shell para poder usarlos en cualquier estado) -->
+<!-- USUARIOS MODAL -->
+<div class="modal-overlay" id="usuarios-modal" onclick="closeUsuariosOutside(event)">
+  <div class="modal" style="width:640px;max-width:97vw;max-height:88vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <span class="modal-title">Administración de usuarios</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="usuarios-admin-note"></div>
+      </div>
+      <button class="modal-close" onclick="closeUsuarios()">✕</button>
+    </div>
+
+    <!-- Lista de usuarios -->
+    <div style="flex:1;overflow-y:auto;padding:16px 20px;" id="usuarios-list-pane"></div>
+
+    <!-- Formulario crear / editar -->
+    <div style="border-top:1px solid var(--border);padding:16px 20px;flex-shrink:0;background:var(--surface2);">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;" id="usuarios-form-title">Nuevo usuario</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Nombre completo</div>
+          <input id="u-nombre" type="text" placeholder="Ej: Dr. García" style="width:100%;padding:6px 9px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--sans);color:var(--text);outline:none;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Rol</div>
+          <select id="u-rol" style="width:100%;padding:6px 9px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--sans);color:var(--text);outline:none;cursor:pointer;">
+            <option value="medico">Médico / a</option>
+            <option value="enfermeria">Enfermería</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Contraseña</div>
+          <input id="u-pass" type="password" placeholder="Mínimo 4 caracteres" style="width:100%;padding:6px 9px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--sans);color:var(--text);outline:none;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Confirmar contraseña</div>
+          <input id="u-pass2" type="password" placeholder="" style="width:100%;padding:6px 9px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--sans);color:var(--text);outline:none;">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="guardarUsuario()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);" id="u-submit-btn">Crear usuario</button>
+        <button onclick="cancelarEdicionUsuario()" id="u-cancel-btn" style="display:none;background:var(--bg);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:var(--sans);">Cancelar</button>
+        <span id="u-error" style="font-size:12px;color:var(--danger);"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- USUARIOS MODAL -->
+<div class="modal-overlay" id="usuarios-modal" onclick="closeUsuariosOutside(event)">
+  <div class="modal" style="width:660px;max-width:97vw;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <span class="modal-title" id="usuarios-modal-title">Usuarios</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="usuarios-admin-note"></div>
+      </div>
+      <button class="modal-close" onclick="closeUsuarios()">✕</button>
+    </div>
+
+    <!-- VISTA ADMIN -->
+    <div id="usuarios-admin-view" style="display:none;flex:1;overflow:hidden;flex-direction:column;display:none;">
+
+      <!-- Lista -->
+      <div style="flex:1;overflow-y:auto;padding:16px 20px;min-height:0;" id="usuarios-list-pane"></div>
+
+      <!-- Formulario crear / editar (admin) -->
+      <div style="border-top:1px solid var(--border);padding:16px 20px;flex-shrink:0;background:var(--surface2);">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;" id="usuarios-form-title">Nuevo usuario</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Nombre completo</div>
+            <input id="u-nombre" type="text" placeholder="Ej: Dr. García" class="u-input">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Rol</div>
+            <select id="u-rol" class="u-input" style="cursor:pointer;">
+              <option value="medico">Médico / a</option>
+              <option value="enfermeria">Enfermería</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Contraseña</div>
+            <input id="u-pass" type="password" placeholder="Mínimo 4 caracteres" class="u-input">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Confirmar contraseña</div>
+            <input id="u-pass2" type="password" placeholder="" class="u-input">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="guardarUsuario()" class="u-submit-btn" id="u-submit-btn">Crear usuario</button>
+          <button onclick="cancelarEdicionUsuario()" id="u-cancel-btn" class="u-cancel-btn" style="display:none;">Cancelar</button>
+          <span id="u-error" style="font-size:12px;color:var(--danger);"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA USUARIO NO-ADMIN: solo cambiar su propia contraseña -->
+    <div id="usuarios-self-view" style="display:none;padding:24px 28px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">
+        Como usuario estándar, solo podés cambiar tu propia contraseña. Para gestionar usuarios, contactá al administrador.
+      </div>
+      <div style="max-width:320px;display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Contraseña actual</div>
+          <input id="self-pass-old" type="password" placeholder="" class="u-input" style="width:100%">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Nueva contraseña</div>
+          <input id="self-pass-new" type="password" placeholder="Mínimo 4 caracteres" class="u-input" style="width:100%">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Confirmar nueva contraseña</div>
+          <input id="self-pass-new2" type="password" placeholder="" class="u-input" style="width:100%">
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="cambiarPropiaPass()" class="u-submit-btn">Cambiar contraseña</button>
+          <span id="self-pass-error" style="font-size:12px;color:var(--danger);"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIN SESIÓN -->
+    <div id="usuarios-nosession-view" style="display:none;padding:32px 28px;text-align:center;color:var(--muted);font-size:13px;">
+      Seleccioná un usuario en el selector de sesión para acceder a esta sección.
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM BAR -->
+<div class="bottom-bar" id="bottom-bar">
+  <!-- Sesión -->
+  <button class="bb-btn" id="bb-session" onclick="toggleSessionSheet()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <span id="bb-session-label">Sesión</span>
+  </button>
+  <!-- Servicios / filtros -->
+  <button class="bb-btn" id="bb-filter" onclick="toggleFilterSheet()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+    <span>Filtros</span>
+  </button>
+  <!-- Log -->
+  <button class="bb-btn" onclick="showLog()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7h8M8 12h8M8 17h4"/></svg>
+    <span>Log</span>
+  </button>
+  <!-- Usuarios -->
+  <button class="bb-btn" onclick="showUsuarios()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M21 20c0-2-1.8-3.5-4-3.5"/></svg>
+    <span>Usuarios</span>
+  </button>
+</div>
+
+<!-- SHEET OVERLAY -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeAllSheets()"></div>
+
+<!-- SESSION SHEET (mobile) -->
+<div class="mobile-session-sheet" id="session-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Iniciar sesión</div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <select id="user-select-mobile" onchange="requestLoginMobile()" style="width:100%;padding:10px 12px;font-size:15px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-family:var(--sans);color:var(--text);">
+      <option value="">— Seleccionar usuario —</option>
+    </select>
+    <div id="session-sheet-status" style="font-size:13px;color:var(--muted);min-height:20px;"></div>
+  </div>
+</div>
+
+<!-- FILTER SHEET (mobile) -->
+<div class="mobile-filter-sheet" id="filter-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Servicios y filtros</div>
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">Servicio</div>
+  <div class="mobile-filter-grid" id="ward-chips">
+    <div class="mobile-filter-chip active" onclick="setWardMobile('todos',this)">Todos</div>
+    <div class="mobile-filter-chip" onclick="setWardMobile('piso1',this)">1° Piso</div>
+    <div class="mobile-filter-chip" onclick="setWardMobile('uco',this)">UCO</div>
+    <div class="mobile-filter-chip" onclick="setWardMobile('obs',this)">Observación</div>
+    <div class="mobile-filter-chip" onclick="setWardMobile('pb',this)">Planta Baja</div>
+  </div>
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 8px;">Estado</div>
+  <div class="mobile-filter-grid" id="status-chips">
+    <div class="mobile-filter-chip active" onclick="setFilterMobile('todos',this)">Todos</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('ocupadas',this)">Ocupadas</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('libres',this)">Libres</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('atb',this)">Con antibióticos</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('pendientes',this)">Con pendientes</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('sinvisita',this)">Sin visita hoy</div>
+  </div>
+  <button onclick="closeAllSheets()" style="width:100%;margin-top:14px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Aplicar</button>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="login-modal" style="z-index:500;">
+  <div class="modal" style="width:360px;max-width:95vw;">
+    <div class="modal-header">
+      <div>
+        <span class="modal-title">Iniciar sesión</span>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="login-user-label"></div>
+      </div>
+      <button class="modal-close" onclick="cancelLogin()">✕</button>
+    </div>
+    <div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Contraseña</div>
+        <input id="login-pass-input" type="password" placeholder="Ingresá tu contraseña"
+          style="width:100%;padding:10px 12px;font-size:15px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-family:var(--sans);color:var(--text);outline:none;"
+          onkeydown="if(event.key==='Enter') confirmLogin()">
+      </div>
+      <div id="login-error" style="font-size:13px;color:var(--danger);min-height:18px;"></div>
+      <button onclick="confirmLogin()"
+        style="width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+        Entrar
+      </button>
+      <div style="font-size:11px;color:var(--muted);text-align:center;">
+        Contraseña incorrecta = 3 intentos → bloqueo de 2 min
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL MODAL -->
+<div class="modal-overlay" id="hist-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Historial de cambios</span>
+      <button class="modal-close" onclick="document.getElementById('hist-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title"></div>
+    <div class="confirm-body" id="confirm-body"></div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancelar</button>
+      <button class="confirm-ok" id="confirm-ok-btn" onclick="confirmAction()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG MODAL -->
+<div class="log-overlay" id="log-overlay" onclick="closeLogOutside(event)">
+  <div class="log-modal">
+    <div class="log-modal-header">
+      <div>
+        <div class="log-modal-title">Log de actividad del día</div>
+        <div class="log-modal-meta" id="log-modal-meta"></div>
+      </div>
+      <button class="modal-close" onclick="closeLog()">✕</button>
+    </div>
+    <div class="log-toolbar">
+      <select class="log-filter-select" id="log-filter-user" onchange="renderLogTable()">
+        <option value="">Todos los usuarios</option>
+      </select>
+      <select class="log-filter-select" id="log-filter-type" onchange="renderLogTable()">
+        <option value="">Todos los tipos</option>
+        <option value="edit">Edición de campo</option>
+        <option value="visita">Visitas</option>
+        <option value="traslado">Traslados</option>
+        <option value="libre">Marcado libre</option>
+        <option value="ocupada">Marcado ocupada</option>
+      </select>
+      <select class="log-filter-select" id="log-filter-ward" onchange="renderLogTable()">
+        <option value="">Todos los servicios</option>
+        <option value="piso1">1° Piso</option>
+        <option value="uco">UCO</option>
+        <option value="obs">Observación</option>
+        <option value="pb">Planta Baja</option>
+      </select>
+      <input class="log-search" id="log-search" type="text" placeholder="Buscar en el log..." oninput="renderLogTable()">
+      <div class="log-dl-group">
+        <button class="dl-btn" onclick="downloadCSV()">⬇ CSV</button>
+        <button class="dl-btn" onclick="downloadPDF()">⬇ PDF</button>
+      </div>
+    </div>
+    <div class="log-count" id="log-count"></div>
+    <div class="log-body">
+      <div id="log-table-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TRASLADO MODAL -->
+<div class="traslado-overlay" id="traslado-overlay" onclick="closeTrasladoOutside(event)">
+  <div class="traslado-modal">
+    <div class="traslado-header">
+      <span style="font-weight:600;font-size:15px">Trasladar paciente</span>
+      <button class="modal-close" onclick="closeTraslado()">✕</button>
+    </div>
+    <div class="traslado-body">
+      <div class="traslado-from-label">Origen</div>
+      <div class="traslado-from" id="traslado-from-text">—</div>
+      <div class="traslado-arrow">↓</div>
+      <div class="traslado-selects">
+        <div>
+          <div class="traslado-select-label">Servicio destino</div>
+          <select class="traslado-select" id="traslado-ward" onchange="onTrasladoWardChange()">
+            <option value="">— Seleccionar servicio —</option>
+            <option value="piso1">1° Piso</option>
+            <option value="uco">UCO</option>
+            <option value="obs">Observación</option>
+            <option value="pb">Planta Baja</option>
+          </select>
+        </div>
+        <div>
+          <div class="traslado-select-label">Cama destino</div>
+          <select class="traslado-select" id="traslado-bed" onchange="onTrasladoBedChange()" disabled>
+            <option value="">— Primero seleccioná un servicio —</option>
+          </select>
+        </div>
+      </div>
+      <div class="traslado-preview" id="traslado-preview"></div>
+      <div class="traslado-warn" id="traslado-warn"></div>
+    </div>
+    <div class="traslado-footer">
+      <button class="confirm-cancel" onclick="closeTraslado()">Cancelar</button>
+      <button class="confirm-ok ok" id="traslado-ok-btn" onclick="ejecutarTraslado()" disabled>Confirmar traslado</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const PATIENTS_RAW = [
+  // 1° PISO
+  {id:'201-1',cama:'201-1',ward:'piso1',nombre:'LOBOS, PATRICIA GABRIELA',sexo:'♀',edad:45,ingreso:'25/03',diag:'IPPB',antec:'Epilepsia',med:'Lamotrigina 500mg c/8hs · Ácido Valproico 500mg c/8hs · Rivotril 0.5mg c/8hs · Levetirazetam 250mg c/12hs',alergias:'No refiere',atb:'PTZ 4.5G + Vancomicina 1G · FI: 31/03/26',pendientes:'Cumplir TTO ATB día 06/04. EVALUAR ALTA: LUNES',novedades:'---'},
+  {id:'202-1',cama:'202-1',ward:'piso1',libre:true},
+  {id:'201-2',cama:'201-2',ward:'piso1',nombre:'LORENZO VÁZQUEZ, MARÍA',sexo:'♀',edad:74,ingreso:'24/03',diag:'Fractura de cadera izquierda',antec:'Trastorno depresivo · Apendicectomía',med:'Clonazepam 2mg VO c/12h (08am y 20pm) · Paroxetina 20mg a las 8am',alergias:'No refiere',atb:'No',pendientes:'Resolución quirúrgica. Confirmar pedido de material x Traumatología',novedades:'---'},
+  {id:'202-2',cama:'202-2',ward:'piso1',nombre:'RAINERI, MIRTA IRENE',sexo:'♀',edad:66,ingreso:'02/04',diag:'EPOC exacerbado',antec:'EPOC · HTA · Policitemia',med:'Frevia 2 puff c/12hs · Amlodipina 10mg VO c/24hs',alergias:'No refiere',atb:'Levofloxacina 750mg EV c/24hs · FI: 02/04/2026',pendientes:'Laboratorio control · Rx de tórax · Evaluar alta',novedades:'---'},
+  {id:'203-1',cama:'203-1',ward:'piso1',nombre:'CÁCERES, MIRTA ISABEL',sexo:'♀',edad:67,ingreso:'25/03',diag:'Infección de sitio quirúrgico · POP Hemicolectomía derecha + Ileotransversoanastomosis · Tu colon · Íleo postquirúrgico',antec:'Ca de intestino · Diverticulitis · Apendicectomía · Colecistectomía',med:'No',alergias:'No refiere',atb:'PTZ / Vancomicina · FI: 01/04/26',pendientes:'---',novedades:'Pase de UTI (01/04)'},
+  {id:'203-2',cama:'203-2',ward:'piso1',libre:true},
+  {id:'203-3',cama:'203-3',ward:'piso1',libre:true},
+  {id:'204-1',cama:'204-1',ward:'piso1',nombre:'SÁNCHEZ, FLORENTINA',sexo:'♀',edad:82,ingreso:'23/01',diag:'Demencia asociada a Parkinson · ITU en tratamiento · KPC positivo',antec:'Parkinson rígido · HTA · Ansiedad',med:'Levocar VO c/8hs · Carvedilol 3.125 VO 08:00 · Carvedilol 6.125 VO 20:00 · Selegilina VO c/24hs · Donepecilo VO c/24hs · Ezetimibe VO c/24hs · ASS 100mg VO c/24hs · Clonazepam 2mg VO cada noche',alergias:'No refiere',atb:'Levofloxacina 750mg VO c/día · FI: 30/3/2026',pendientes:'En espera traslado a geriátrico. Corroborar trámites geriátrico. Lab control',novedades:'---'},
+  {id:'204-2',cama:'204-2',ward:'piso1',nombre:'SALINAS, ROSA INÉS',sexo:'♀',edad:74,ingreso:'10/12/25',diag:'Caso social · POP artroplastia total de cadera doble movilidad · Hiponatremia moderada · Luxación de prótesis',antec:'HTA · DM tipo 2 · Anemia crónica · Hipotiroidismo · HDB por divertículos sangrantes · Diverticulectomía · Prótesis vertebral · Colecistectomía',med:'Vidagliptina/Metformina 50/850mg · Losartán 100mg · Continez 15 · Napruz 500mg · Levotiroxina 175mcg · Aspirina · Merital · Diosmina Hesperidina · Pantus',alergias:'No registrada',atb:'No',pendientes:'En espera de geriátrico · Resolución quirúrgica luxación cadera · Lab control post hemotransfusión',novedades:'Hemotransfusión 1 UND GB (01/04)'},
+  {id:'205',cama:'205',ward:'piso1',nombre:'LANDEYRA, CARLOS ALBERTO',sexo:'♂',edad:76,ingreso:'28/02',diag:'Infección en columna',antec:'DM IRQ · HTA · ICC · Arritmia · ACO · Neuropatía diabética · Retinopatía · Dislipidemia · Portador MCP recambio hace 1 mes · Obesidad · Extabaquista · ERC · Hipoacusia bilateral · Escara sacra',med:'Bisoprolol 5mg c/12hs · Atorvastatina 10mg/día · Ácido tióctico 600mg/día · Vildagliptina 50mg antes almuerzo y cena · Ácido ascórbico 200mg/día · Sintrom · Insulina Lantus 32UI cena · Insulina rápida según HGT · Timolol gotas oftálmicas',alergias:'NITROFURANTOÍNA',atb:'Colistin 100mg c/12h EV + Tigeciclina 50mg c/12h EV · FI: 11/03',pendientes:'Interconsulta con Neurocirugía desde (26/03)?',novedades:'03/03: AMS 1.5 x dos días → PTZ 4,5G c/6h\n09/03: Urocultivo — Klebsiella pneumoniae sensible Vancomicina + Sulfametoxazol/Trimetroprina\n11/03: Rotación ATB → Colistin 100mg c/12h EV + Tigeciclina 50mg c/12h\n19/03: Transfusión 3 UND PFC\n26/03: TAC — proceso inflamatorio/infeccioso disco L4-L5'},
+  {id:'206',cama:'206',ward:'piso1',nombre:'ROMERO, LEONARDO FABIO',sexo:'♂',edad:24,ingreso:'03/04',diag:'Anemia moderada sintomática con requerimiento de hemotransfusión · Úlcera grado 2 con sangrado activo',antec:'Mielomeningocele congénito (silla de ruedas) · Anemia crónica · Osteomielitis crónica en talón · Incontinencia urofecal · ITU a repetición',med:'Hierro 100mg VO c/día · Oxibutinina 10mg VO c/12hs',alergias:'No refiere',atb:'Clindamicina 300mg EV c/6hs · FI: 29/03/2026',pendientes:'Lab control post hemotransfusión',novedades:'03/04: Hemotransfusión 1 UND GR'},
+  {id:'207',cama:'207',ward:'piso1',nombre:'IBALO, MARTA ELENA',sexo:'♀',edad:66,ingreso:'30/03',diag:'Deshidratación severa con alteración de electrolitos asociado a cuadro infeccioso urinario',antec:'ACV · DBT tipo 2 insulinorrequiriente · IR · Colecistectomía',med:'Haloperidol 10mg VO c/24hs 08:00 · Insulina 15 UI en las mañanas',alergias:'No refiere',atb:'Bactrim 480mg/ml EV c/12hs FI: 31/3 · Metronidazol 500mg EV c/8hs FI: 1/4',pendientes:'---',novedades:'---'},
+  {id:'208',cama:'208',ward:'piso1',nombre:'SOSA, MARÍA SINFORIANA',sexo:'♀',edad:68,ingreso:'27/03',diag:'Gastroenteritis no infecciosa · Hiponatremia severa',antec:'Artritis reumatoidea · EPOC · Dislipidemia · Colecistectomía · Cirugía túnel carpiano bilateral',med:'Leflunomida 20mg VO post desayuno · Atorvastatina 10mg VO 21:00 · Ácido fólico 10mg VO viernes · Metotrexate 15mg VO martes · Salbutamol 2 puff c/disnea',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'03/04: Hemotransfusión 3 UND PFC'},
+  {id:'209',cama:'209',ward:'piso1',nombre:'FERNÁNDEZ, JOSÉ LUIS',sexo:'♂',edad:89,ingreso:'30/03',diag:'Anasarca · ICC descompensada · ITU',antec:'HTA · Ca de colon · EPOC · Angioplastia 3 stents · Colostomía',med:'Tamsulosina 0,4mg VO noche · Clonazepam 0,5mg VO noche · Losartán 50mg VO c/12h · Bisoprolol 2,5mg VO c/12h · Atorvastatina 20mg VO noche · Clopidogrel 75mg VO c/día · ASS 100mg VO c/día · Tiotropio 2 puffs c/24h · Frevia 2 puffs c/12h',alergias:'No refiere',atb:'TMS 160mg EV c/12hs · FI: 29/03/2026',pendientes:'Lab control',novedades:'---'},
+  {id:'210',cama:'210',ward:'piso1',libre:true},
+  {id:'211',cama:'211',ward:'piso1',nombre:'MARTÍNEZ, ANA MARÍA',sexo:'♀',edad:67,ingreso:'02/04',diag:'Tetania muscular · Hipocalcemia + Hipomagnesemia severas',antec:'HTA · ERC · Arritmia cardíaca · Colecistectomía · Cesárea (1) · Apendicectomía · Osteosíntesis tobillo derecho',med:'Amlodipina 10mg VO post desayuno · Enalapril 10mg VO c/12hs · Nebivolol 10mg VO 20:00 · Alprazolam 0,5mg VO c/12hs · Atorvastatina 10mg VO 21:00',alergias:'No refiere',atb:'No',pendientes:'Lab control',novedades:'---'},
+  {id:'212-1',cama:'212-1',ward:'piso1',nombre:'LA PAZ CASTILLO, ALCIDES BISMAR',sexo:'♂',edad:80,ingreso:'02/03',diag:'Celulitis de piel y partes blandas',antec:'HTA · Arritmia · HPB',med:'Leflunomida 20mg VO post desayuno · Atorvastatina 10mg VO 21:00 · Ácido fólico 10mg VO viernes · Metotrexate 15mg VO martes · Salbutamol 2 puff c/disnea',alergias:'No refiere',atb:'PTZ 4,5g 1.5g c/6hs + Vancomicina 1g c/12hs EV · FI: 19/03',pendientes:'---',novedades:'Meropenem 500mg c/8hs (03/3–11/3)\nVancomicina 1g c/día (04/3–11/3)\nInternación UTI (03/03–16/03)\n17/3: AMS 1.5g c/6hs + Claritromicina 500mg c/12hs EV (17/3–19/3)\n18/3: Transfusión 1 UND GRD\n19/3: Rotación ATB → PTZ 4,5g c/6hs + Vancomicina 1g c/12hs EV'},
+  {id:'212-2',cama:'212-2',ward:'piso1',libre:true},
+  {id:'213-1',cama:'213-1',ward:'piso1',nombre:'ESPÍNOLA, VICTORINA',sexo:'♀',edad:77,ingreso:'13/10/25',diag:'En espera de tercer nivel (geriátrico)',antec:'EPOC oxigenodependiente · Fibrosis pulmonar',med:'O2 4 lts/min continuo cánula nasal · Neumoterol 400mcg c/12hs · Salmeterol/Fluticasona 1 cáp inhalada c/12hs · Tiotropio 2 cáps c/24hs · Montelukast 10mg VO 18:00 · Deltisona B 8mg ½ comp VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'En condiciones de alta a geriátrico'},
+  {id:'213-2',cama:'213-2',ward:'piso1',nombre:'MALDONADO, MARGARITA BEATRIZ',sexo:'♀',edad:90,ingreso:'12/02/26',diag:'Caso social · En espera de tercer nivel (geriátrico)',antec:'HTA · Depresión · Demencia senil · RTC bilateral',med:'Sertralina 50mg VO c/día · Amlodipina 5mg VO c/día desayuno · Cilostazol 50mg VO c/día · Nebivolol 2,5mg VO post desayuno',alergias:'No refiere',atb:'PTZ 4.5g c/6hs EV · FI: 01/04/26 (por diarrea)',pendientes:'---',novedades:'---'},
+  {id:'214-1',cama:'214-1',ward:'piso1',nombre:'ÁLVAREZ, RAÚL ROLANDO',sexo:'♂',edad:67,ingreso:'30/03/26',diag:'EPOC exacerbado · NAC',antec:'EPOC',med:'No',alergias:'No refiere',atb:'No',pendientes:'Destete O2 · Lab control',novedades:'---'},
+  {id:'214-2',cama:'214-2',ward:'piso1',nombre:'LÓPEZ, JUAN RAÚL',sexo:'♂',edad:72,ingreso:'30/03/26',diag:'Úlcera infectada MID',antec:'HPB · Fractura de tobillo',med:'Tamsulosina 4mg VO 20:00',alergias:'No refiere',atb:'PTZ 4.5g + Vancomicina 1g · FI: 30/03/26',pendientes:'Lab control · Ecodoppler arterio-venoso MMII',novedades:'---'},
+  {id:'215-1',cama:'215-1',ward:'piso1',nombre:'QUIROGA, ROGELIO HIGINIO',sexo:'♂',edad:69,ingreso:'27/03/26',diag:'Síndrome coledociano',antec:'HTA · Diabetes insulinodependiente · Artroplastia meniscos rodilla izquierda',med:'Metformina 850mg VO c/día · Sitagliptina 100mg VO c/día ayunas · Losartán 100mg VO c/día · AAS 100mg VO c/día · Insulina NPH 20UI AM / 24UI 12:00 / 29UI PM 20:00 · Correcciones Insulina rápida Glulisina',alergias:'No refiere',atb:'AMS 3g EV c/6h · FI: 27/03/26',pendientes:'IC con Cirugía · Lab control',novedades:'20/03/26: Ecografía abdominal — vesícula multilitiásica'},
+  {id:'215-2',cama:'215-2',ward:'piso1',nombre:'CARDOZO, FERNANDO ALFREDO',sexo:'♂',edad:71,ingreso:'22/03/26',diag:'Osteomielitis de rodilla',antec:'HTA · Diabetes insulinodependiente · Artroplastia meniscos rodilla izquierda',med:'Metformina 850mg VO c/día · Sitagliptina 100mg VO c/día ayunas · Losartán 100mg VO c/día · AAS 100mg VO c/día · Insulina NPH 20UI AM / 24UI 12:00 / 29UI PM 20:00 · Correcciones Insulina rápida Glulisina',alergias:'No refiere',atb:'Imipenem 500mg c/6hs EV · Amikacina 1g c/24hs · Ceftazidima 1g c/12hs · FI: 26/02',pendientes:'IC con Cirugía · Lab control',novedades:'04/02/26: Toilette QX + Capsulorrafia. Alta por Cirugía\n18/02/26: Cultivo — Klebsiella pneumoniae multirresistente (sensible Amikacina, Imipenem, Ceftazidima)\n03/03/26: Trámite compra ATB internación domiciliaria'},
+  {id:'216-1',cama:'216-1',ward:'piso1',libre:true},
+  {id:'216-2',cama:'216-2',ward:'piso1',nombre:'CASTRO, JOSÉ RAMÓN',sexo:'♂',edad:67,ingreso:'16/02/26',diag:'Caso social · EPOC',antec:'EPOC · TBQ activo · Cirugía pulmón · HTA',med:'Valsartán 160mg c/12hs VO · Amlodipino 10mg c/día si TA >140/90 · Neumotide 2 puff c/8hs · Salbutamol 2 puff c/8hs · Sertralina 50mg 20:00 · Bromuro de ipratropio 2 puff c/12hs',alergias:'No refiere',atb:'---',pendientes:'---',novedades:'19/03: Familiares firman NR'},
+  {id:'217-1',cama:'217-1',ward:'piso1',libre:true},
+  {id:'217-2',cama:'217-2',ward:'piso1',nombre:'BAGOLÍN, HORACIO EMILIO',sexo:'♂',edad:69,ingreso:'01/04/26',diag:'Hematuria franca · ITU · Insuficiencia renal',antec:'HPB · Parkinson · Ca renal · Nefrectomía',med:'Medopar 250mg VO c/24hs · Tamsulosina 0.4mcg VO c/24hs',alergias:'No refiere',atb:'AMS 1.5g EV c/8hs · FI: 01/04/2026',pendientes:'---',novedades:'---'},
+  // UCO
+  {id:'107-1',cama:'107-1',ward:'uco',libre:true},
+  {id:'107-2',cama:'107-2',ward:'uco',nombre:'CORREA, NÉSTOR RUBÉN',sexo:'♂',edad:76,ingreso:'30/03/26',diag:'Angina',antec:'IAM 2013 con 3 stents · IC FEY 33% · IC descompensada · FA anticoagulado · Shock mixto séptico-cardiogénico · EPOC',med:'AAS 100mg/día · Bisoprolol 2,5mg 08:00 · Valsartán 80mg 08:00 · Atorvastatina 40mg 08:00 · Dapagliflozina 10mg 08:00 · Espironolactona 25mg 08:00 · Rivaroxabán 15mg 08:00 · Budesonide 2 puffs c/8hs · Bromuro de ipratropio 2 puffs c/12hs',alergias:'No refiere',atb:'No',pendientes:'Realización CCG para el martes 07/04/26',novedades:'---'},
+  {id:'108-1',cama:'108-1',ward:'uco',nombre:'SPADAFORA, ELVIRA',sexo:'♀',edad:87,ingreso:'01/04/26',diag:'Insuficiencia respiratoria aguda',antec:'HTA · Cardiopatía · Angioplastia hace 9 años con stents',med:'Lorazepam 2.5mg VO noche 20:00 · Atorvastatina 20mg VO noche 20:00 · Espironolactona 25mg VO c/24hs · ASS 100mg VO c/24hs 08:00 · Losartán 50mg VO c/24hs 08:00',alergias:'No refiere',atb:'Levofloxacino 750mg EV c/24hs · FI: 01/04/2026',pendientes:'Lab control · Evaluar alta',novedades:'---'},
+  {id:'108-2',cama:'108-2',ward:'uco',libre:true},
+  {id:'109-1',cama:'109-1',ward:'uco',nombre:'GRANERO, VICTORIA DEL VALLE',sexo:'♀',edad:75,ingreso:'23/03/26',diag:'Sepsis a foco pulmonar/urinario en falla renal aguda — Plan de diálisis diario',antec:'HTA · DBT tipo 2 · IR · Monorrenal · Apendicectomía · Colecistectomía · Hernioplastia con malla',med:'Enalapril 10mg VO c/24hs · Carvedilol 12,5mg VO c/24hs · ASS 100mg VO c/24hs · Insulina NPH 20UI mañanas · Pregabalina 75mg VO c/24hs',alergias:'No refiere',atb:'PTZ 4.5g EV c/12hs FI: 31/3/2026 · Claritromicina 500mg EV c/12hs FI: 23/03/2026',pendientes:'---',novedades:'---'},
+  {id:'109-2',cama:'109-2',ward:'uco',nombre:'ALOMO, CELIA',sexo:'♀',edad:80,ingreso:'30/03/26',diag:'Fx hueso frontal · Sangrado intraxial de origen contusivo · TEC sin pérdida de conciencia',antec:'Trastorno depresivo · Bypass cardíaco',med:'Desvenlafaxina 100mg VO c/24hs · Bisoprolol 5mg VO c/24hs · Rosuvastatina 10mg VO c/24hs · Clonazepam 2mg VO cada noche',alergias:'No refiere',atb:'---',pendientes:'---',novedades:'TAC cráneo 31/03: Sangrado intraparenquimatoso lóbulo occipital y frontal derecho discreto, línea media conservada'},
+  {id:'110-1',cama:'110-1',ward:'uco',nombre:'TORREZ, JUANA ELVIRA',sexo:'♀',edad:79,ingreso:'30/03/26',diag:'ERC reagudizada FG 4 ml/min · TEC sin pérdida · Hiponatremia grave',antec:'HTA · ERC en diálisis trisemanal (Lun-Mié-Vie) · Colecistectomía',med:'Pregabalina 50mg VO c/24hs (19:00) · Quetiapina 25mg VO c/24hs (23:00)',alergias:'No refiere',atb:'No',pendientes:'TAC encéfalo PD · Rx columna cervical PD · Rx MMSS izq PD',novedades:'02/04: Hemotransfusión 1 UND GR'},
+  {id:'110-2',cama:'110-2',ward:'uco',nombre:'LÓPEZ, ELBA LETICIA',sexo:'♀',edad:75,ingreso:'26/03/26',diag:'Trastorno de la coagulación por anticoagulantes · ICC descompensada FEY 20%',antec:'HTA · Arritmia cardíaca · Hipotiroidismo · Anticoagulada · ICC',med:'Bisoprolol 5mg VO 08:00 / 2,5mg VO post cena · Dapagliflozina 10mg post desayuno · Espironolactona 25mg VO c/día · Levotiroxina 100mcg ayunas · Acenocumarol 1mg Lun a Sáb',alergias:'No refiere',atb:'---',pendientes:'---',novedades:'27/03: Transfusión 2 UND PFC'},
+  // OBSERVACIÓN
+  {id:'GEN/01',cama:'GENERAL/01',ward:'obs',libre:true},
+  {id:'GEN/02',cama:'GENERAL/02',ward:'obs',nombre:'MANSILLA, MARÍA INÉS',sexo:'♀',edad:81,ingreso:'06/03/26',diag:'Deshidratación severa superada · Negativismo a la ingesta · Trastorno de la deglución · ITU tratada',antec:'Demencia · HTA',med:'Quetiapina 50mg VO c/8hs · Sertralina 50mg VO c/8hs · Risperidona 4 gotas c/8hs · Clonazepam 0.5mg VO noche · Enalapril/Hidroclorotiazida 10/12.5mg VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'---'},
+  {id:'GEN/03',cama:'GENERAL/03',ward:'obs',nombre:'DE GIGLIO, MARGARITA',sexo:'♀',edad:87,ingreso:'02/03/26',diag:'SDRA · Derrame pleural bilateral en resolución · ICC compensada · Hipokalemia severa tratada · Caso social · KPC positivo',antec:'Anemia severa · EPOC · HTA · Cirugía de cadera',med:'Atorvastatina 20mg VO c/día 08:00 · Mosapride 5mg c/día VO · Valsartán 160mg VO c/12hs · Amlodipino 10mg c/día VO · Carvedilol 12.5mg c/12hs VO · Hidroclorotiazida 12,5mg VO/día',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'---'},
+  {id:'GEN/04',cama:'GENERAL/04',ward:'obs',libre:true},
+  // PLANTA BAJA
+  {id:'101-1',cama:'101-1',ward:'pb',libre:true},
+  {id:'101-2',cama:'101-2',ward:'pb',nombre:'GONZÁLEZ, BEATRIZ ROSARIO',sexo:'♀',edad:86,ingreso:'02/04/26',diag:'Contusión de cadera — a descartar fractura cadera izquierda',antec:'Apendicectomía · Tumorectomía por fibroma',med:'Sertralina 50mg VO post desayuno · Alprazolam 0,5mg VO 17:00 · Zopiclona 10mg VO 20:30',alergias:'No refiere',atb:'No',pendientes:'Rx de cadera · IC con Traumatología',novedades:'---'},
+  {id:'102-1',cama:'102-1',ward:'pb',nombre:'FERREIRA, SUSANA CLARA',sexo:'♀',edad:78,ingreso:'03/01/26',diag:'Caso social · En espera de tercer nivel (geriátrico)',antec:'HTA · EPOC con O2 domiciliario · ACV con secuelas · Postrada desde hace 1 año · Demencia tipo Alzheimer · Colecistectomía · Cesárea (1)',med:'Frevia 2 puff c/12hs INH · Salbutamol 2 puff c/12hs 20:00 · Amlodipino 10mg c/24hs 20:00 · Quetiapina 25mg c/24hs noche VO · Zolpidem 12,5mg c/24hs noche VO · Alprazolam 1mg c/24hs 21:00 VO · Metformina 500mg VO cena · Nivax Plus 1 tab c/12hs · Montelukast 10mg VO noche',alergias:'No refiere',atb:'No',pendientes:'IC con Psiquiatría',novedades:'---'},
+  {id:'102-2',cama:'102-2',ward:'pb',nombre:'GONZÁLEZ, MARTA CAROLINA',sexo:'♀',edad:87,ingreso:'01/04/26',diag:'Síncope en estudio',antec:'HTA',med:'Enalapril 10mg VO c/día post desayuno · Atenolol 50mg VO c/día post desayuno',alergias:'No refiere',atb:'---',pendientes:'Lab de control · Ecocardiograma · Eco Doppler cuello y MMII',novedades:'---'},
+  {id:'103-1',cama:'103-1',ward:'pb',nombre:'SANTA CRUZ, GINÉS',sexo:'♂',edad:72,ingreso:'01/04/26',diag:'ITU resistente',antec:'FA con ACO · Recambio valvular mitral + bypass (hace 1 año) · HTA · ACV isquémico secuelado hemiplejia derecha (sep/2025) · Marcapasos por enfermedad del nodo sinusal',med:'Bisoprolol 2.5mg VO c/24hs 08:00 SNG · Losartán 25mg VO c/24hs 08:00 SNG · Atorvastatina 40mg VO noche 20:00 SNG · Rivaroxabán 15mg VO c/24hs 09:00 SNG · Aspirina 100mg VO c/24hs 10:00 SNG · Alimentación por K108 a 84ml/h',alergias:'No refiere',atb:'AMS 1.5g EV c/6hs · FI: 01/04/2026',pendientes:'---',novedades:'Urocultivo: Streptococcus agalactiae resistente a Ciprofloxacina · Sensible a Ampicilina, Nitrofurantoína y Cefotaxina'},
+  {id:'103-2',cama:'103-2',ward:'pb',nombre:'JALOS, JOSÉ',sexo:'♂',edad:76,ingreso:'04/04/26',diag:'Fractura de cadera izquierda',antec:'DM insulinorrequiriente · HPB',med:'Metformina 1g almuerzo y cena · Insulina NPH 24UI desayuno / 20UI almuerzo / 4UI noche · Tamsulosina 0.4mg/día',alergias:'No refiere',atb:'No',pendientes:'Rx de cadera · IC con Traumatología para definir conducta',novedades:'---'},
+  {id:'104',cama:'104',ward:'pb',nombre:'ZÁRATE, MARTA BEATRIZ',sexo:'♀',edad:72,ingreso:'18/03/26',diag:'Retiro material osteosíntesis + espaciador funcional + toma de muestras por pseudoartrosis cadera izquierda · Hipokalemia moderada · ITU · Luxación de cadera',antec:'---',med:'---',alergias:'No refiere',atb:'Piptaz 4.5g EV c/6h FI: 19/03 · Ciprofloxacina 400mg EV c/8h FI: 01/04/26',pendientes:'---',novedades:'18/03: POP inmediato — retiro material osteosíntesis + espaciador funcional + muestras pseudoartrosis cadera izq.\n31/03: Transfusión 1 UND GR'},
+  {id:'105',cama:'105',ward:'pb',nombre:'ALARCÓN, NATALIO',sexo:'♂',edad:69,ingreso:'02/04/26',diag:'Insuficiencia renal crónica · Hiponatremia severa',antec:'Deshidratación · IRC · Hiponatremia · Cirrosis hepática',med:'Ácido ursodeoxicólico VO c/24hs · Rifaximina 550mg VO c/24hs · Lactulosa 10ml c/24hs · Omeprazol 40mg VO c/24hs · Alprazolam 2mg VO PM',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'---'},
+];
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let patients = JSON.parse(JSON.stringify(PATIENTS_RAW)); // working copy
+let history = {}; // { patientId: [{ts, user, field, before, after}] }
+let visits  = {}; // { patientId: [{ts, user}] }  — visitas del día
+let currentUser = '';
+let currentUserId = null;
+let currentPatient = null;
+let currentWard = 'todos';
+let currentFilter = 'todos';
+let editing = false;
+let pendingChanges = {}; // { field: newValue }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() {
+  const now = new Date();
+  document.getElementById('header-date').textContent =
+    now.toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  refreshUserSelect();
+  populateLoginSelect();
+  updateStats();
+  renderList();
+  // App stays hidden — shown only after successful login
+}
+
+// ── PANTALLA DE LOGIN ──────────────────────────────────────────────
+function populateLoginSelect() {
+  const sel = document.getElementById('ls-user');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    usuarios.filter(u => u.activo).map(u =>
+      `<option value="${u.id}" ${u.id===prev?'selected':''}>${u.nombre} (${ROL_LABEL[u.rol]||u.rol})</option>`
+    ).join('');
+}
+
+function onLoginUserChange() {
+  document.getElementById('ls-error').textContent   = '';
+  document.getElementById('ls-lockout').textContent = '';
+  document.getElementById('ls-pass').value = '';
+  document.getElementById('ls-pass').focus();
+}
+
+var _lockoutTimer = null;
+function doLogin() {
+  const uid   = document.getElementById('ls-user').value;
+  const pass  = document.getElementById('ls-pass').value;
+  const errEl = document.getElementById('ls-error');
+  const lockEl= document.getElementById('ls-lockout');
+  errEl.textContent  = '';
+  lockEl.textContent = '';
+
+  if (!uid)  { errEl.textContent = 'Seleccioná un usuario.'; return; }
+  if (!pass) { errEl.textContent = 'Ingresá tu contraseña.'; return; }
+
+  const u = usuarios.find(x => x.id === uid);
+  if (!u) { errEl.textContent = 'Usuario no encontrado.'; return; }
+
+  // Check lockout
+  const att = loginAttempts[uid] || { count: 0, lockedUntil: 0 };
+  if (att.lockedUntil && Date.now() < att.lockedUntil) {
+    const secs = Math.ceil((att.lockedUntil - Date.now()) / 1000);
+    lockEl.textContent = `Bloqueado. Intentá en ${secs}s.`;
+    startLockoutCountdown(uid);
+    return;
+  }
+
+  if (pass !== u.pass) {
+    att.count = (att.count || 0) + 1;
+    loginAttempts[uid] = att;
+    if (att.count >= 3) {
+      att.lockedUntil = Date.now() + 2 * 60 * 1000;
+      att.count = 0;
+      lockEl.textContent = 'Demasiados intentos. Bloqueado 2 minutos.';
+      startLockoutCountdown(uid);
+    } else {
+      errEl.textContent = `Contraseña incorrecta. Intentos restantes: ${3 - att.count}`;
+    }
+    document.getElementById('ls-pass').value = '';
+    document.getElementById('ls-pass').focus();
+    return;
+  }
+
+  // ✓ Login correcto
+  loginAttempts[uid] = { count: 0, lockedUntil: 0 };
+  _applyLogin(u);
+  // Dismiss login screen
+  const screen = document.getElementById('login-screen');
+  const shell  = document.getElementById('app-shell');
+  screen.classList.add('hidden');
+  shell.classList.add('visible');
+  setTimeout(() => screen.style.display = 'none', 400);
+}
+
+function startLockoutCountdown(uid) {
+  clearInterval(_lockoutTimer);
+  const lockEl = document.getElementById('ls-lockout');
+  _lockoutTimer = setInterval(() => {
+    const att = loginAttempts[uid];
+    if (!att || !att.lockedUntil || Date.now() >= att.lockedUntil) {
+      clearInterval(_lockoutTimer);
+      if (lockEl) lockEl.textContent = 'Ya podés intentar de nuevo.';
+      return;
+    }
+    const secs = Math.ceil((att.lockedUntil - Date.now()) / 1000);
+    if (lockEl) lockEl.textContent = `Bloqueado. Intentá en ${secs}s.`;
+  }, 1000);
+}
+
+// Cuando Supabase carga usuarios desde la nube, repoblar el select del login
+function _afterUsersLoaded() {
+  populateLoginSelect();
+  refreshUserSelect();
+}
+
+// ── USUARIOS ──────────────────────────────────────────────────────────────────
+let usuarios = [
+  { id: 'u1', nombre: 'Dr. García',       rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u2', nombre: 'Dra. Rodríguez',   rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u3', nombre: 'Dr. Pérez',        rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u4', nombre: 'Enf. López',       rol: 'enfermeria', pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u5', nombre: 'Enf. Martínez',    rol: 'enfermeria', pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u6', nombre: 'Administrador',    rol: 'admin',      pass: 'admin', activo: true, creado: '07/04/2026' },
+];
+let editingUserId = null;
+
+const ROL_LABEL = { admin: 'Administrador', medico: 'Médico/a', enfermeria: 'Enfermería' };
+
+function refreshUserSelect() {
+  const sel = document.getElementById('user-select');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    usuarios.filter(u => u.activo).map(u =>
+      `<option value="${u.id}" ${u.id===prev?'selected':''}>${u.nombre}</option>`
+    ).join('');
+  // If previously selected user was deactivated, clear
+  if (prev && !usuarios.find(u=>u.id===prev&&u.activo)) {
+    sel.value = '';
+    currentUser = '';
+    currentUserId = null;
+    document.getElementById('user-initials').textContent = '—';
+    document.getElementById('user-name-display').textContent = 'Sin sesión';
+  }
+}
+
+// ── LOGIN CON CONTRASEÑA ───────────────────────────────────────────
+// Intentos fallidos por usuario: { userId: { count, lockedUntil } }
+var loginAttempts = {};
+var _loginPendingUid = null;   // uid seleccionado esperando contraseña
+var _loginFromMobile = false;
+
+function requestLogin() {
+  var sel = document.getElementById('user-select');
+  var uid = sel.value;
+  if (!uid) {
+    // Deselect: cerrar sesión directamente
+    applyLogout();
+    return;
+  }
+  _openLoginModal(uid, false);
+}
+
+function requestLoginMobile() {
+  var mSel = document.getElementById('user-select-mobile');
+  var uid  = mSel.value;
+  if (!uid) { applyLogout(); return; }
+  _openLoginModal(uid, true);
+}
+
+function _openLoginModal(uid, fromMobile) {
+  var u = usuarios.find(function(x){ return x.id === uid; });
+  if (!u) return;
+
+  // Check lockout
+  var att = loginAttempts[uid];
+  if (att && att.lockedUntil && Date.now() < att.lockedUntil) {
+    var remaining = Math.ceil((att.lockedUntil - Date.now()) / 1000);
+    showToast('Usuario bloqueado. Intentá en ' + remaining + ' segundos.');
+    _resetSelect();
+    return;
+  }
+
+  _loginPendingUid = uid;
+  _loginFromMobile = fromMobile;
+
+  document.getElementById('login-user-label').textContent = u.nombre + ' · ' + (ROL_LABEL[u.rol] || u.rol);
+  document.getElementById('login-pass-input').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-modal').classList.add('open');
+  setTimeout(function(){ document.getElementById('login-pass-input').focus(); }, 120);
+}
+
+function confirmLogin() {
+  var uid  = _loginPendingUid;
+  var u    = usuarios.find(function(x){ return x.id === uid; });
+  var pass = document.getElementById('login-pass-input').value;
+  var errEl= document.getElementById('login-error');
+
+  if (!u) { cancelLogin(); return; }
+  if (!pass) { errEl.textContent = 'Ingresá tu contraseña.'; return; }
+
+  // Check lockout again
+  var att = loginAttempts[uid] || { count: 0, lockedUntil: 0 };
+  if (att.lockedUntil && Date.now() < att.lockedUntil) {
+    var remaining = Math.ceil((att.lockedUntil - Date.now()) / 1000);
+    errEl.textContent = 'Bloqueado. Intentá en ' + remaining + 's.';
+    return;
+  }
+
+  if (pass !== u.pass) {
+    att.count = (att.count || 0) + 1;
+    loginAttempts[uid] = att;
+    if (att.count >= 3) {
+      att.lockedUntil = Date.now() + 2 * 60 * 1000; // 2 min
+      att.count = 0;
+      errEl.textContent = 'Demasiados intentos. Bloqueado 2 minutos.';
+    } else {
+      errEl.textContent = 'Contraseña incorrecta. Intentos restantes: ' + (3 - att.count);
+    }
+    document.getElementById('login-pass-input').value = '';
+    document.getElementById('login-pass-input').focus();
+    return;
+  }
+
+  // ✓ Contraseña correcta
+  loginAttempts[uid] = { count: 0, lockedUntil: 0 }; // reset
+  document.getElementById('login-modal').classList.remove('open');
+  _applyLogin(u);
+}
+
+function cancelLogin() {
+  document.getElementById('login-modal').classList.remove('open');
+  _loginPendingUid = null;
+  _resetSelect();
+}
+
+function _resetSelect() {
+  // Restore selects to current logged-in user (or empty)
+  var val = currentUserId || '';
+  document.getElementById('user-select').value = val;
+  var mSel = document.getElementById('user-select-mobile');
+  if (mSel) mSel.value = val;
+}
+
+function _applyLogin(u) {
+  currentUser   = u.nombre;
+  currentUserId = u.id;
+  var initials  = u.nombre.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+  document.getElementById('user-initials').textContent      = initials;
+  document.getElementById('user-name-display').textContent  = u.nombre;
+  document.getElementById('logout-btn').style.display       = 'inline-block';
+  // Sync both selects
+  document.getElementById('user-select').value = u.id;
+  var mSel = document.getElementById('user-select-mobile');
+  if (mSel) mSel.value = u.id;
+
+  if (_loginFromMobile) {
+    updateSessionSheetStatus();
+    setTimeout(closeAllSheets, 500);
+  }
+
+  showToast('Bienvenido/a, ' + u.nombre);
+  renderList();
+  if (currentPatient) renderDetail();
+}
+
+function applyLogout() {
+  currentUser   = '';
+  currentUserId = null;
+  document.getElementById('user-initials').textContent     = '—';
+  document.getElementById('user-name-display').textContent = 'Sin sesión';
+  document.getElementById('logout-btn').style.display      = 'none';
+  document.getElementById('user-select').value = '';
+  var mSel = document.getElementById('user-select-mobile');
+  if (mSel) mSel.value = '';
+  if (typeof updateSessionSheetStatus === 'function') updateSessionSheetStatus();
+  // Volver a la pantalla de login
+  var screen = document.getElementById('login-screen');
+  var shell  = document.getElementById('app-shell');
+  document.getElementById('ls-user').value          = '';
+  document.getElementById('ls-pass').value          = '';
+  document.getElementById('ls-error').textContent   = '';
+  document.getElementById('ls-lockout').textContent = '';
+  populateLoginSelect();
+  screen.style.display = '';
+  shell.classList.remove('visible');
+  requestAnimationFrame(function(){ screen.classList.remove('hidden'); });
+}
+
+function switchUser() {
+  // Legacy — now handled by requestLogin. Keep for compatibility.
+  requestLogin();
+}
+
+function switchUserMobile() {
+  // Legacy — now handled by requestLoginMobile.
+  requestLoginMobile();
+}
+
+function showUsuarios() {
+  editingUserId = null;
+  resetUsuarioForm();
+
+  const modal    = document.getElementById('usuarios-modal');
+  const adminV   = document.getElementById('usuarios-admin-view');
+  const selfV    = document.getElementById('usuarios-self-view');
+  const noneV    = document.getElementById('usuarios-nosession-view');
+  const title    = document.getElementById('usuarios-modal-title');
+  const note     = document.getElementById('usuarios-admin-note');
+
+  // Hide all views first
+  adminV.style.display = 'none';
+  selfV.style.display  = 'none';
+  noneV.style.display  = 'none';
+
+  if (!currentUserId) {
+    title.textContent = 'Usuarios';
+    note.textContent  = '';
+    noneV.style.display = 'block';
+  } else {
+    const me = usuarios.find(u => u.id === currentUserId);
+    if (me && me.rol === 'admin') {
+      title.textContent = 'Administración de usuarios';
+      note.textContent  = `Sesión admin: ${me.nombre}`;
+      adminV.style.display = 'flex';
+      adminV.style.flexDirection = 'column';
+      adminV.style.flex = '1';
+      adminV.style.overflow = 'hidden';
+      renderUsuariosList();
+    } else {
+      title.textContent = 'Mi cuenta';
+      note.textContent  = `Usuario: ${me ? me.nombre : ''} · ${ROL_LABEL[me?.rol]||''}`;
+      // Clear self-change fields
+      document.getElementById('self-pass-old').value   = '';
+      document.getElementById('self-pass-new').value   = '';
+      document.getElementById('self-pass-new2').value  = '';
+      document.getElementById('self-pass-error').textContent = '';
+      selfV.style.display = 'block';
+    }
+  }
+
+  modal.classList.add('open');
+}
+
+function closeUsuarios() {
+  document.getElementById('usuarios-modal').classList.remove('open');
+  editingUserId = null;
+  resetUsuarioForm();
+}
+
+function closeUsuariosOutside(e) {
+  if (e.target === document.getElementById('usuarios-modal')) closeUsuarios();
+}
+
+function renderUsuariosList() {
+  const pane = document.getElementById('usuarios-list-pane');
+  if (usuarios.length === 0) {
+    pane.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No hay usuarios registrados.</div>';
+    return;
+  }
+  pane.innerHTML = usuarios.map(u => {
+    const initials       = u.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const isCurrentLogin = currentUserId === u.id;
+    const isSelf         = isCurrentLogin;
+    return `<div class="u-row">
+      <div class="u-avatar ${u.activo?'':'inactive'}">${initials}</div>
+      <div class="u-info">
+        <div class="u-name ${u.activo?'':'inactive'}">${u.nombre}${isCurrentLogin?' <span style="font-size:10px;color:var(--accent);font-weight:400">(vos)</span>':''}</div>
+        <div class="u-meta">${ROL_LABEL[u.rol]||u.rol} · Creado: ${u.creado}${u.activo?'':' · <span style="color:var(--danger)">Inactivo</span>'}</div>
+      </div>
+      <span class="role-badge role-${u.rol}">${ROL_LABEL[u.rol]||u.rol}</span>
+      <div class="u-actions">
+        <button class="u-btn" onclick="editarUsuario('${u.id}')" title="Editar nombre y rol">Editar</button>
+        ${!isSelf ? `<button class="u-btn-reset" onclick="resetPass('${u.id}')" title="Resetear contraseña">Reset pass</button>` : ''}
+        <button class="u-btn ${u.activo?'':'toggle-active'}" onclick="toggleUsuario('${u.id}')">${u.activo?'Desactivar':'Activar'}</button>
+        ${!isSelf ? `<button class="u-btn danger" onclick="eliminarUsuario('${u.id}')">Eliminar</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CAMBIAR PROPIA CONTRASEÑA (usuarios no-admin) ─────────────────────────────
+function cambiarPropiaPass() {
+  const old  = document.getElementById('self-pass-old').value;
+  const nw   = document.getElementById('self-pass-new').value;
+  const nw2  = document.getElementById('self-pass-new2').value;
+  const errEl= document.getElementById('self-pass-error');
+  errEl.textContent = '';
+
+  const me = usuarios.find(u => u.id === currentUserId);
+  if (!me) return;
+
+  if (!old)               { errEl.textContent = 'Ingresá tu contraseña actual.'; return; }
+  if (old !== me.pass)    { errEl.textContent = 'La contraseña actual es incorrecta.'; return; }
+  if (!nw || nw.length < 4){ errEl.textContent = 'La nueva contraseña debe tener al menos 4 caracteres.'; return; }
+  if (nw !== nw2)          { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
+  if (nw === old)          { errEl.textContent = 'La nueva contraseña debe ser diferente a la actual.'; return; }
+
+  me.pass = nw;
+  document.getElementById('self-pass-old').value  = '';
+  document.getElementById('self-pass-new').value  = '';
+  document.getElementById('self-pass-new2').value = '';
+  showToast('Contraseña actualizada correctamente');
+}
+
+// ── RESET DE CONTRASEÑA (solo admin) ─────────────────────────────────────────
+function resetPass(id) {
+  const u = usuarios.find(x => x.id === id);
+  showConfirm(
+    `Resetear contraseña`,
+    `La contraseña de "${u.nombre}" se reseteará a "1234". El usuario deberá cambiarla en su próxima sesión.`,
+    'Resetear', 'danger',
+    () => {
+      u.pass = '1234';
+      showToast(`Contraseña de "${u.nombre}" reseteada a "1234"`);
+    }
+  );
+}
+
+// ── CREAR / EDITAR USUARIO (solo admin) ───────────────────────────────────────
+function guardarUsuario() {
+  const me = usuarios.find(u => u.id === currentUserId);
+  if (!me || me.rol !== 'admin') { showToast('Sin permisos de administrador'); return; }
+
+  const nombre = document.getElementById('u-nombre').value.trim();
+  const rol    = document.getElementById('u-rol').value;
+  const pass   = document.getElementById('u-pass').value;
+  const pass2  = document.getElementById('u-pass2').value;
+  const errEl  = document.getElementById('u-error');
+  errEl.textContent = '';
+
+  if (!nombre) { errEl.textContent = 'El nombre es obligatorio.'; return; }
+
+  if (editingUserId) {
+    if (pass && pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres.'; return; }
+    if (pass && pass !== pass2)   { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
+    const u = usuarios.find(x => x.id === editingUserId);
+
+    // Prevent removing last admin
+    if (u.rol === 'admin' && rol !== 'admin') {
+      const otherAdmins = usuarios.filter(x => x.rol === 'admin' && x.activo && x.id !== u.id).length;
+      if (otherAdmins === 0) { errEl.textContent = 'No podés quitar el rol admin al único administrador activo.'; return; }
+    }
+
+    u.nombre = nombre;
+    u.rol    = rol;
+    if (pass) u.pass = pass;
+    if (currentUserId === u.id) {
+      currentUser = u.nombre;
+      document.getElementById('user-name-display').textContent = u.nombre;
+      document.getElementById('user-initials').textContent = u.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    }
+    showToast(`Usuario "${nombre}" actualizado`);
+  } else {
+    if (!pass)           { errEl.textContent = 'La contraseña es obligatoria.'; return; }
+    if (pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres.'; return; }
+    if (pass !== pass2)   { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
+    if (usuarios.find(u => u.nombre.toLowerCase() === nombre.toLowerCase())) {
+      errEl.textContent = 'Ya existe un usuario con ese nombre.'; return;
+    }
+    const today = new Date().toLocaleDateString('es-AR');
+    usuarios.push({ id: 'u' + Date.now(), nombre, rol, pass, activo: true, creado: today });
+    showToast(`Usuario "${nombre}" creado`);
+  }
+
+  refreshUserSelect();
+  renderUsuariosList();
+  resetUsuarioForm();
+}
+
+function editarUsuario(id) {
+  const u = usuarios.find(x => x.id === id);
+  editingUserId = id;
+  document.getElementById('u-nombre').value = u.nombre;
+  document.getElementById('u-rol').value    = u.rol;
+  document.getElementById('u-pass').value   = '';
+  document.getElementById('u-pass2').value  = '';
+  document.getElementById('u-error').textContent = '';
+  document.getElementById('usuarios-form-title').textContent = `Editando: ${u.nombre}`;
+  document.getElementById('u-submit-btn').textContent = 'Guardar cambios';
+  document.getElementById('u-cancel-btn').style.display = 'inline-block';
+  document.getElementById('u-pass').placeholder = 'Dejar vacío para no cambiar';
+  document.getElementById('u-nombre').focus();
+}
+
+function cancelarEdicionUsuario() { resetUsuarioForm(); }
+
+function resetUsuarioForm() {
+  editingUserId = null;
+  ['u-nombre','u-pass','u-pass2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('u-rol').value    = 'medico';
+  document.getElementById('u-error').textContent = '';
+  document.getElementById('u-pass').placeholder = 'Mínimo 4 caracteres';
+  document.getElementById('usuarios-form-title').textContent = 'Nuevo usuario';
+  document.getElementById('u-submit-btn').textContent = 'Crear usuario';
+  document.getElementById('u-cancel-btn').style.display = 'none';
+}
+
+function toggleUsuario(id) {
+  const u = usuarios.find(x => x.id === id);
+  if (u.activo && currentUserId === id) { showToast('No podés desactivar tu propia sesión'); return; }
+  if (u.activo && u.rol === 'admin') {
+    const activeAdmins = usuarios.filter(x => x.activo && x.rol === 'admin').length;
+    if (activeAdmins <= 1) { showToast('Debe quedar al menos un administrador activo'); return; }
+  }
+  u.activo = !u.activo;
+  refreshUserSelect();
+  renderUsuariosList();
+  showToast(`"${u.nombre}" ${u.activo ? 'activado' : 'desactivado'}`);
+}
+
+function eliminarUsuario(id) {
+  const u = usuarios.find(x => x.id === id);
+  if (currentUserId === id) { showToast('No podés eliminarte a vos mismo'); return; }
+  const activeAdmins = usuarios.filter(x => x.activo && x.rol === 'admin' && x.id !== id).length;
+  if (u.rol === 'admin' && u.activo && activeAdmins === 0) {
+    showToast('Debe quedar al menos un administrador activo'); return;
+  }
+  showConfirm(
+    `Eliminar usuario`,
+    `¿Eliminar a "${u.nombre}" permanentemente? Esta acción no se puede deshacer.`,
+    'Eliminar', 'danger',
+    () => {
+      usuarios = usuarios.filter(x => x.id !== id);
+      refreshUserSelect();
+      renderUsuariosList();
+      showToast(`"${u.nombre}" eliminado`);
+    }
+  );
+}
+
+// ── FILTERING ──────────────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function setWard(w, el) {
+  currentWard = w;
+  document.querySelectorAll('.ward-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  currentPatient = null;
+  document.getElementById('detail-pane').innerHTML = `<div class="detail-empty"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg><span>Seleccioná una cama para ver el detalle</span></div>`;
+  renderList();
+}
+
+function filterPatients() { renderList(); }
+
+function getVisible() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  return patients.filter(p => {
+    if (currentWard !== 'todos' && p.ward !== currentWard) return false;
+    if (currentFilter === 'ocupadas' && p.libre) return false;
+    if (currentFilter === 'libres' && !p.libre) return false;
+    if (currentFilter === 'atb' && (p.libre || !p.atb || p.atb==='No' || p.atb==='---' || p.atb==='')) return false;
+    if (currentFilter === 'pendientes' && (p.libre || !p.pendientes || p.pendientes==='---' || p.pendientes==='')) return false;
+    if (currentFilter === 'sinvisita'  && (p.libre || hasBeenVisited(p.id))) return false;
+    if (q) {
+      const hay = (p.nombre||'')+' '+(p.diag||'')+' '+(p.med||'')+' '+(p.antec||'')+' '+(p.cama||'');
+      if (!hay.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// ── RENDER LIST ───────────────────────────────────────────────────────────────
+function renderList() {
+  const visible = getVisible();
+  const pane = document.getElementById('list-pane');
+  pane.innerHTML = visible.map(p => {
+    const isActive = currentPatient && currentPatient.id === p.id ? 'active' : '';
+    if (p.libre) {
+      return `<div class="patient-card libre ${isActive}" onclick="selectPatient('${p.id}')">
+        <div class="patient-cama">CAMA ${p.cama}</div>
+        <div class="patient-name" style="color:var(--libre);font-weight:400">— LIBRE —</div>
+        <div class="tag-row"><span class="tag tag-libre">libre</span></div>
+      </div>`;
+    }
+    const hasAtb   = p.atb && p.atb!=='No' && p.atb!=='---' && p.atb!=='';
+    const hasPend  = p.pendientes && p.pendientes!=='---' && p.pendientes!=='';
+    const hasAlrg  = p.alergias && p.alergias!=='No refiere' && p.alergias!=='No registrada';
+    const visited  = hasBeenVisited(p.id);
+    const lastVisit = visited ? visits[p.id][0] : null;
+    return `<div class="patient-card ${isActive}${visited ? '' : ' card-sinvisita'}" onclick="selectPatient('${p.id}')">
+      <div class="patient-cama">CAMA ${p.cama}</div>
+      <div class="patient-name">${p.nombre}</div>
+      <div class="patient-diag">${p.diag||''}</div>
+      <div class="tag-row">
+        ${hasAtb ?'<span class="tag tag-atb">Antibióticos</span>':''}
+        ${hasAlrg?'<span class="tag tag-alergia">ALERGIA</span>':''}
+        ${hasPend?'<span class="tag tag-pendiente">PENDIENTE</span>':''}
+        ${visited
+          ? `<span class="tag tag-visitado">✓ ${lastVisit.ts.split(', ')[1]?.slice(0,5)||'visitado'}</span>`
+          : `<span class="tag tag-sinvisita">Sin visita</span>`}
+      </div>
+    </div>`;
+  }).join('');
+  updateStats();
+}
+
+function updateStats() {
+  const all = patients;
+  const ocu = all.filter(p=>!p.libre).length;
+  document.getElementById('stat-total').textContent = all.length;
+  document.getElementById('stat-ocu').textContent = ocu;
+  document.getElementById('stat-libre').textContent = all.length - ocu;
+  const wards = {piso1:0,uco:0,obs:0,pb:0};
+  all.forEach(p=>{ if(wards[p.ward]!==undefined) wards[p.ward]++; });
+  document.getElementById('wc-todos').textContent = all.length;
+  document.getElementById('wc-piso1').textContent = wards.piso1;
+  document.getElementById('wc-uco').textContent = wards.uco;
+  document.getElementById('wc-obs').textContent = wards.obs;
+  document.getElementById('wc-pb').textContent = wards.pb;
+}
+
+// ── SELECT PATIENT ────────────────────────────────────────────────────────────
+function selectPatient(id) {
+  currentPatient = patients.find(p=>p.id===id);
+  editing = false;
+  pendingChanges = {};
+  document.getElementById('save-btn').disabled = true;
+  renderDetail();
+  renderList(); // refresh active state
+}
+
+function renderDetail() {
+  const p = currentPatient;
+  const pane = document.getElementById('detail-pane');
+  if (!p) { pane.innerHTML=''; return; }
+
+  if (p.libre) {
+    pane.innerHTML = `<div class="detail-header">
+      <div>
+        <div class="det-cama">CAMA ${p.cama} · ${wardLabel(p.ward)}</div>
+        <div class="det-name" style="color:var(--libre)">— CAMA LIBRE —</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-ocupar" onclick="toggleLibre('${p.id}')">Marcar como ocupada</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const hasAlrg = p.alergias && p.alergias!=='No refiere' && p.alergias!=='No registrada';
+  const novedLines = (p.novedades||'').split('\n').filter(l=>l && l!=='---');
+  const visited   = hasBeenVisited(p.id);
+  const lastVisit = visited ? visits[p.id][0] : null;
+  const allVisits = visits[p.id] || [];
+
+  pane.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="det-cama">CAMA ${p.cama} · ${wardLabel(p.ward)}</div>
+        <div class="det-name">${p.nombre}</div>
+        <div class="det-meta">
+          <span>${p.sexo} ${p.edad} años</span>
+          <span>📅 Ingreso: ${p.ingreso}</span>
+          ${hasAlrg?`<span style="color:var(--danger);font-weight:600">⚠ ALERGIA: ${p.alergias}</span>`:''}
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-hist" onclick="showHistory('${p.id}')">Historial</button>
+        <button class="btn-trasladar" onclick="showTraslado('${p.id}')">Trasladar</button>
+        <button class="btn-edit" onclick="toggleEdit()">${editing?'Cancelar':'Editar'}</button>
+        <button class="btn-libre" onclick="toggleLibre('${p.id}')">Marcar como libre</button>
+      </div>
+    </div>
+
+    <div class="visita-bar ${visited ? 'visita-bar--ok' : 'visita-bar--pending'}">
+      <div class="visita-bar-left">
+        ${visited
+          ? `<span class="visita-icon">✓</span><span><strong>Visitado hoy</strong> — última visita ${lastVisit.ts.split(', ')[1]||''} por ${lastVisit.user}${allVisits.length > 1 ? ` · ${allVisits.length} visitas totales` : ''}</span>`
+          : `<span class="visita-icon visita-icon--warn">!</span><span style="color:var(--warn)"><strong>Sin visita registrada hoy</strong></span>`}
+      </div>
+      <button class="btn-visita ${visited ? 'btn-visita--done' : ''}" onclick="marcarVisitado('${p.id}')">
+        ${visited ? '+ Registrar otra visita' : 'Marcar como visitado'}
+      </button>
+    </div>
+
+    <div class="fields-grid">
+      ${fieldBlock('diag','DIAGNÓSTICO',p.diag,'full',true)}
+      ${fieldBlock('antec','ANTECEDENTES',p.antec,'full',true)}
+      ${fieldBlock('med','MEDICACIÓN HABITUAL',p.med,'full',true)}
+      ${fieldBlock('alergias','ALERGIAS',p.alergias,'',false,'alergia')}
+      ${fieldBlock('atb','ANTIBIÓTICOS',p.atb,'',false,'atb')}
+      ${fieldBlock('pendientes','PENDIENTES',p.pendientes,'',true)}
+    </div>
+
+    <div class="novedades-block">
+      <div class="novedades-title">Novedades / evolución</div>
+      ${editing ? `<textarea class="field-edit" id="edit-novedades" rows="4">${p.novedades||''}</textarea>` : 
+        novedLines.length>0 
+          ? novedLines.map(l=>`<div class="novedad-entry"><div class="novedad-dot"></div><div><div class="novedad-text">${l}</div></div></div>`).join('')
+          : `<div style="color:var(--muted);font-size:13px">Sin novedades registradas</div>`
+      }
+      ${editing ? `<div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn-hist" onclick="toggleEdit()">Cancelar</button>
+        <button class="save-btn" style="background:var(--accent);color:#fff;padding:6px 16px;border-radius:6px;border:none;font-size:13px;cursor:pointer" onclick="commitChanges()">Guardar cambios</button>
+      </div>` : ''}
+    </div>
+  `;
+
+}
+
+function fieldBlock(key, label, value, extraClass='', multiline=false, valClass='') {
+  const fullClass = extraClass ? `field-block ${extraClass}` : 'field-block';
+  const dispValue = value && value!=='---' ? value : '<span style="color:var(--muted)">—</span>';
+  if (editing) {
+    if (multiline) {
+      return `<div class="${fullClass}">
+        <div class="field-label">${label}</div>
+        <textarea class="field-edit" id="edit-${key}" rows="3" oninput="markDirty('${key}', this.value)">${value||''}</textarea>
+      </div>`;
+    } else {
+      return `<div class="${fullClass}">
+        <div class="field-label">${label}</div>
+        <input type="text" class="field-edit single" id="edit-${key}" value="${(value||'').replace(/"/g,'&quot;')}" oninput="markDirty('${key}', this.value)">
+      </div>`;
+    }
+  }
+  return `<div class="${fullClass}">
+    <div class="field-label">${label}</div>
+    <div class="field-value ${valClass}">${dispValue}</div>
+  </div>`;
+}
+
+function wardLabel(w) {
+  return {piso1:'1° Piso',uco:'UCO',obs:'Observación',pb:'Planta Baja'}[w]||w;
+}
+
+function toggleEdit() {
+  if (!currentUser) { showToast('Seleccioná un usuario antes de editar'); return; }
+  editing = !editing;
+  pendingChanges = {};
+  document.getElementById('save-btn').disabled = true;
+  renderDetail();
+}
+
+function markDirty(field, value) {
+  pendingChanges[field] = value;
+  document.getElementById('save-btn').disabled = false;
+}
+
+function commitChanges() {
+  if (!currentUser) { showToast('Seleccioná un usuario para guardar'); return; }
+  const p = currentPatient;
+  const ts = new Date().toLocaleString('es-AR');
+  if (!history[p.id]) history[p.id] = [];
+
+  // also check novedades textarea
+  const novedEl = document.getElementById('edit-novedades');
+  if (novedEl) pendingChanges['novedades'] = novedEl.value;
+
+  Object.entries(pendingChanges).forEach(([field, newVal]) => {
+    const before = p[field]||'';
+    if (before !== newVal) {
+      history[p.id].unshift({ts, user: currentUser, field, before, after: newVal});
+      p[field] = newVal;
+    }
+  });
+
+  pendingChanges = {};
+  editing = false;
+  document.getElementById('save-btn').disabled = true;
+  renderDetail();
+  renderList();
+  showToast('Cambios guardados correctamente');
+}
+
+function saveChanges() { commitChanges(); }
+
+// ── HISTORY MODAL ─────────────────────────────────────────────────────────────
+function showHistory(id) {
+  const p = patients.find(x=>x.id===id);
+  const entries = history[id] || [];
+  const body = document.getElementById('modal-body');
+  document.querySelector('.modal-title').textContent = `Historial — Cama ${p.cama}`;
+  if (entries.length === 0) {
+    body.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">No hay cambios registrados en esta sesión.</div>`;
+  } else {
+    const fieldLabels = FIELD_LABELS;
+    body.innerHTML = entries.map(e=>`
+      <div class="hist-entry">
+        <div class="hist-time">${e.ts}</div>
+        <div class="hist-content">
+          <div class="hist-field">${fieldLabels[e.field]||e.field}</div>
+          <div class="hist-before">${e.before||'(vacío)'}</div>
+          <div class="hist-after">${e.after||'(vacío)'}</div>
+          <div class="hist-user">Por: ${e.user}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('hist-modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('hist-modal')) {
+    document.getElementById('hist-modal').classList.remove('open');
+  }
+}
+
+// ── LIBRE TOGGLE ──────────────────────────────────────────────────────────────
+let _confirmCallback = null;
+
+function toggleLibre(id) {
+  if (!currentUser) { showToast('Seleccioná un usuario antes de hacer cambios'); return; }
+  const p = patients.find(x=>x.id===id);
+  if (p.libre) {
+    // Mark as occupied — just flip the flag and clear the libre state
+    showConfirm(
+      `Marcar cama ${p.cama} como ocupada`,
+      `La cama quedará disponible para asignar un nuevo paciente. Podés completar los datos desde el panel de edición.`,
+      'Confirmar', 'ok',
+      () => {
+        const ts = new Date().toLocaleString('es-AR');
+        if (!history[p.id]) history[p.id] = [];
+        history[p.id].unshift({ts, user: currentUser, field:'estado', before:'Libre', after:'Ocupada'});
+        delete p.libre;
+        p.nombre = 'NUEVO PACIENTE'; p.diag=''; p.antec=''; p.med=''; p.alergias='No refiere'; p.atb=''; p.pendientes=''; p.novedades='';
+        renderList(); renderDetail(); showToast(`Cama ${p.cama} marcada como ocupada`);
+      }
+    );
+  } else {
+    showConfirm(
+      `Marcar cama ${p.cama} como libre`,
+      `Esto indicará que la cama está desocupada. Los datos del paciente actual quedarán registrados en el historial.`,
+      'Marcar libre', 'danger',
+      () => {
+        const ts = new Date().toLocaleString('es-AR');
+        if (!history[p.id]) history[p.id] = [];
+        history[p.id].unshift({ts, user: currentUser, field:'estado', before:`Ocupada — ${p.nombre}`, after:'Libre'});
+        p.libre = true;
+        editing = false; pendingChanges = {};
+        document.getElementById('save-btn').disabled = true;
+        renderList(); renderDetail(); showToast(`Cama ${p.cama} marcada como libre`);
+      }
+    );
+  }
+}
+
+function showConfirm(title, body, okLabel, okClass, callback) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').textContent = body;
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.textContent = okLabel;
+  btn.className = `confirm-ok ${okClass}`;
+  _confirmCallback = callback;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  _confirmCallback = null;
+}
+
+function confirmAction() {
+  if (_confirmCallback) _confirmCallback();
+  closeConfirm();
+}
+
+// ── LOG DEL DÍA ───────────────────────────────────────────────────────────────
+const FIELD_LABELS = {
+  diag:'Diagnóstico', antec:'Antecedentes', med:'Medicación',
+  alergias:'Alergias', atb:'Antibióticos', pendientes:'Pendientes',
+  novedades:'Novedades', estado:'Estado cama', traslado:'Traslado', visita:'Visita'
+};
+
+function getAllLogEntries() {
+  // Flatten history map into a single sorted array with patient/bed context
+  const entries = [];
+  Object.entries(history).forEach(([patientId, changes]) => {
+    const p = patients.find(x => x.id === patientId);
+    changes.forEach(c => {
+      entries.push({
+        ts: c.ts,
+        user: c.user,
+        bedId: patientId,
+        cama: p ? p.cama : patientId,
+        ward: p ? p.ward : '',
+        nombre: p && !p.libre ? p.nombre : (c.before && c.before.includes('Ocupada') ? c.before.replace('Ocupada — ','') : ''),
+        field: c.field,
+        before: c.before,
+        after: c.after,
+      });
+    });
+  });
+  // Sort newest first (ts is locale string, so sort by insertion order via reverse)
+  // Since we unshift, index 0 = newest; we already have them newest-first per patient.
+  // Merge-sort stable by treating ts string as comparable (dd/mm/yyyy, hh:mm:ss → sort key)
+  entries.sort((a, b) => parseTsSort(b.ts) - parseTsSort(a.ts));
+  return entries;
+}
+
+function parseTsSort(ts) {
+  // ts format: "dd/mm/yyyy, hh:mm:ss" → ms
+  try {
+    const [datePart, timePart] = ts.split(', ');
+    const [d, m, y] = datePart.split('/');
+    return new Date(`${y}-${m}-${d}T${timePart}`).getTime();
+  } catch { return 0; }
+}
+
+function getFilteredLogEntries() {
+  let entries = getAllLogEntries();
+  const filterUser = document.getElementById('log-filter-user').value;
+  const filterType = document.getElementById('log-filter-type').value;
+  const filterWard = document.getElementById('log-filter-ward').value;
+  const search     = document.getElementById('log-search').value.toLowerCase().trim();
+
+  if (filterUser) entries = entries.filter(e => e.user === filterUser);
+  if (filterWard) entries = entries.filter(e => e.ward === filterWard);
+  if (filterType) {
+    entries = entries.filter(e => {
+      if (filterType === 'edit')     return !['traslado','estado','visita'].includes(e.field);
+      if (filterType === 'visita')   return e.field === 'visita';
+      if (filterType === 'traslado') return e.field === 'traslado';
+      if (filterType === 'libre')    return e.field === 'estado' && (e.after||'').toLowerCase().includes('libre');
+      if (filterType === 'ocupada')  return e.field === 'estado' && (e.after||'').toLowerCase().includes('ocupada');
+      return true;
+    });
+  }
+  if (search) {
+    entries = entries.filter(e =>
+      [e.user, e.cama, e.nombre, e.field, e.before, e.after].some(v => (v||'').toLowerCase().includes(search))
+    );
+  }
+  return entries;
+}
+
+function entryTypeBadge(field, after) {
+  if (field === 'visita')   return `<span class="log-type-badge badge-visita">Visita</span>`;
+  if (field === 'estado') {
+    if ((after||'').toLowerCase().includes('libre'))
+      return `<span class="log-type-badge badge-libre">Libre</span>`;
+    return `<span class="log-type-badge badge-ocupada">Ocupada</span>`;
+  }
+  return `<span class="log-type-badge badge-edit">${FIELD_LABELS[field] || field}</span>`;
+}
+
+function showLog() {
+  // Populate user filter from actual users who made changes
+  const users = [...new Set(getAllLogEntries().map(e => e.user))].filter(Boolean);
+  const sel = document.getElementById('log-filter-user');
+  sel.innerHTML = '<option value="">Todos los usuarios</option>' +
+    users.map(u => `<option value="${u}">${u}</option>`).join('');
+
+  // Reset filters
+  document.getElementById('log-filter-type').value = '';
+  document.getElementById('log-filter-ward').value = '';
+  document.getElementById('log-search').value = '';
+
+  const now = new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('log-modal-meta').textContent = now;
+
+  renderLogTable();
+  document.getElementById('log-overlay').classList.add('open');
+}
+
+function renderLogTable() {
+  const entries = getFilteredLogEntries();
+  const total   = getAllLogEntries().length;
+  document.getElementById('log-count').textContent =
+    `Mostrando ${entries.length} de ${total} registro${total !== 1 ? 's' : ''}`;
+
+  const container = document.getElementById('log-table-container');
+  if (entries.length === 0) {
+    container.innerHTML = `<div class="log-empty">
+      ${total === 0
+        ? 'No hay cambios registrados en esta sesión todavía.'
+        : 'Ningún registro coincide con los filtros aplicados.'}
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = `<table class="log-table">
+    <thead>
+      <tr>
+        <th>Hora</th>
+        <th>Usuario</th>
+        <th>Cama</th>
+        <th>Paciente</th>
+        <th>Tipo</th>
+        <th>Antes</th>
+        <th>Después</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${entries.map(e => `
+        <tr>
+          <td style="white-space:nowrap;font-family:var(--mono);color:var(--muted)">${e.ts}</td>
+          <td style="white-space:nowrap;font-weight:500">${e.user || '—'}</td>
+          <td style="white-space:nowrap;font-family:var(--mono)">${e.cama}<br><span style="color:var(--muted);font-size:10px">${wardLabel(e.ward)}</span></td>
+          <td style="max-width:140px">${e.nombre || '—'}</td>
+          <td>${entryTypeBadge(e.field, e.after)}</td>
+          <td class="log-val-before" style="max-width:160px;word-break:break-word">${truncate(e.before, 80)}</td>
+          <td class="log-val-after"  style="max-width:160px;word-break:break-word">${truncate(e.after,  80)}</td>
+        </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function truncate(str, n) {
+  if (!str) return '—';
+  return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+// ── DOWNLOAD CSV ──────────────────────────────────────────────────────────────
+function downloadCSV() {
+  const entries = getFilteredLogEntries();
+  const today   = new Date().toLocaleDateString('es-AR').replaceAll('/','_');
+  const header  = ['Hora','Usuario','Cama','Servicio','Paciente','Tipo de cambio','Campo','Valor anterior','Valor nuevo'];
+  const rows    = entries.map(e => [
+    e.ts,
+    e.user || '',
+    e.cama,
+    wardLabel(e.ward),
+    e.nombre || '',
+    e.field === 'traslado' ? 'Traslado' : e.field === 'estado' ? 'Estado cama' : 'Edición',
+    FIELD_LABELS[e.field] || e.field,
+    e.before || '',
+    e.after  || '',
+  ]);
+
+  const csv = [header, ...rows].map(row =>
+    row.map(cell => `"${String(cell).replaceAll('"','""')}"`).join(',')
+  ).join('\r\n');
+
+  const bom  = '\uFEFF'; // UTF-8 BOM for Excel
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `log_clinica_${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV descargado');
+}
+
+// ── DOWNLOAD PDF ──────────────────────────────────────────────────────────────
+function downloadPDF() {
+  const entries = getFilteredLogEntries();
+  const today   = new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  const rows = entries.map(function(e) {
+    return '<tr>' +
+      '<td>' + e.ts + '</td>' +
+      '<td>' + (e.user || '—') + '</td>' +
+      '<td>' + e.cama + '<br><small>' + wardLabel(e.ward) + '</small></td>' +
+      '<td>' + (e.nombre || '—') + '</td>' +
+      '<td>' + (FIELD_LABELS[e.field] || e.field) + '</td>' +
+      '<td class="val before">' + (e.before||'—').slice(0,120) + '</td>' +
+      '<td class="val after">'  + (e.after ||'—').slice(0,120) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  const tableHtml = entries.length === 0
+    ? '<p style="color:#888;padding:20px 0">No hay registros para los filtros seleccionados.</p>'
+    : '<table><thead><tr><th>Hora</th><th>Usuario</th><th>Cama</th><th>Paciente</th><th>Campo</th><th>Antes</th><th>Despues</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+  const html =
+    '<!DOCTYPE html><html lang="es"><head>' +
+    '<meta charset="UTF-8">' +
+    '<title>Log del dia</title>' +
+    '<style>' +
+    '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+    'body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1917; padding: 20px; }' +
+    'h1 { font-size: 15px; margin-bottom: 2px; }' +
+    '.meta { font-size: 11px; color: #666; margin-bottom: 14px; }' +
+    'table { width: 100%; border-collapse: collapse; }' +
+    'th { background: #1a4a8a; color: #fff; text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; }' +
+    'td { padding: 5px 8px; border-bottom: 1px solid #e0dfd8; vertical-align: top; }' +
+    'tr:nth-child(even) td { background: #f8f7f3; }' +
+    '.val { font-family: monospace; font-size: 10px; max-width: 140px; word-break: break-word; }' +
+    '.before { color: #9b2335; } .after { color: #1a6b3a; }' +
+    '.footer { margin-top: 14px; font-size: 10px; color: #888; border-top: 1px solid #ddd; padding-top: 8px; }' +
+    '@media print { body { padding: 0; } }' +
+    '</style></head><body>' +
+    '<h1>Pase de Clinica - Log de actividad</h1>' +
+    '<div class="meta">' + today + ' · ' + entries.length + ' registro' + (entries.length !== 1 ? 's' : '') + '</div>' +
+    tableHtml +
+    '<div class="footer">Generado el ' + new Date().toLocaleString('es-AR') + ' · Sistema Pase de Clinica</div>' +
+    '</body></html>';
+
+  const win = window.open('', '_blank', 'width=1000,height=700');
+  win.document.write(html);
+  win.document.close();
+  win.onload = function() {
+    win.print();
+    showToast('PDF listo para imprimir / guardar');
+  };
+}
+
+function closeLog() { document.getElementById('log-overlay').classList.remove('open'); }
+function closeLogOutside(e) { if (e.target === document.getElementById('log-overlay')) closeLog(); }
+
+// ── VISITAS ───────────────────────────────────────────────────────────────────
+function hasBeenVisited(id) {
+  return !!(visits[id] && visits[id].length > 0);
+}
+
+function marcarVisitado(id) {
+  if (!currentUser) { showToast('Seleccioná un usuario antes de registrar la visita'); return; }
+  const p   = patients.find(x => x.id === id);
+  const ts  = new Date().toLocaleString('es-AR');
+  if (!visits[id]) visits[id] = [];
+  visits[id].unshift({ ts, user: currentUser });
+
+  // Log entry — también aparece en el log del día
+  if (!history[id]) history[id] = [];
+  history[id].unshift({ ts, user: currentUser, field: 'visita', before: '', after: `Visita registrada por ${currentUser}` });
+
+  renderDetail();
+  renderList();
+  showToast(`Visita registrada — ${p.nombre}`);
+}
+
+// ── TRASLADO ──────────────────────────────────────────────────────────────────
+let _trasladoPatientId = null;
+
+function showTraslado(id) {
+  if (!currentUser) { showToast('Seleccioná un usuario antes de trasladar'); return; }
+  const p = patients.find(x=>x.id===id);
+  _trasladoPatientId = id;
+
+  // Reset modal state
+  document.getElementById('traslado-from-text').innerHTML =
+    `<strong>${p.nombre}</strong><br><span style="font-size:12px;color:var(--muted)">Cama ${p.cama} · ${wardLabel(p.ward)}</span>`;
+  document.getElementById('traslado-ward').value = '';
+  const bedSel = document.getElementById('traslado-bed');
+  bedSel.innerHTML = '<option value="">— Primero seleccioná un servicio —</option>';
+  bedSel.disabled = true;
+  document.getElementById('traslado-preview').classList.remove('visible');
+  document.getElementById('traslado-warn').classList.remove('visible');
+  document.getElementById('traslado-ok-btn').disabled = true;
+
+  document.getElementById('traslado-overlay').classList.add('open');
+}
+
+function onTrasladoWardChange() {
+  const wardId = document.getElementById('traslado-ward').value;
+  const bedSel = document.getElementById('traslado-bed');
+  document.getElementById('traslado-preview').classList.remove('visible');
+  document.getElementById('traslado-warn').classList.remove('visible');
+  document.getElementById('traslado-ok-btn').disabled = true;
+
+  if (!wardId) {
+    bedSel.innerHTML = '<option value="">— Primero seleccioná un servicio —</option>';
+    bedSel.disabled = true;
+    return;
+  }
+
+  const srcPatient = patients.find(x=>x.id===_trasladoPatientId);
+  // Get all beds in target ward, sorted
+  const wardsInOrder = patients.filter(p => p.ward === wardId);
+
+  bedSel.innerHTML = '<option value="">— Seleccionar cama —</option>';
+  wardsInOrder.forEach(p => {
+    if (p.id === srcPatient.id) return; // skip origin
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    const ocupada = !p.libre;
+    opt.textContent = `Cama ${p.cama}${ocupada ? ' — ' + p.nombre : ' — LIBRE'}`;
+    if (ocupada) opt.setAttribute('data-ocupada','1');
+    bedSel.appendChild(opt);
+  });
+  bedSel.disabled = false;
+}
+
+function onTrasladoBedChange() {
+  const bedId = document.getElementById('traslado-bed').value;
+  const preview = document.getElementById('traslado-preview');
+  const warn    = document.getElementById('traslado-warn');
+  const okBtn   = document.getElementById('traslado-ok-btn');
+
+  preview.classList.remove('visible');
+  warn.classList.remove('visible');
+  okBtn.disabled = true;
+
+  if (!bedId) return;
+
+  const dest = patients.find(x=>x.id===bedId);
+  const src  = patients.find(x=>x.id===_trasladoPatientId);
+
+  if (!dest.libre) {
+    warn.textContent = `⚠ Cama ${dest.cama} está ocupada por ${dest.nombre}. Solo podés trasladar a camas libres.`;
+    warn.classList.add('visible');
+    return;
+  }
+
+  preview.innerHTML = `Mover a <strong>Cama ${dest.cama} · ${wardLabel(dest.ward)}</strong>. La cama origen (${src.cama}) quedará libre.`;
+  preview.classList.add('visible');
+  okBtn.disabled = false;
+}
+
+function ejecutarTraslado() {
+  const bedId  = document.getElementById('traslado-bed').value;
+  if (!bedId) return;
+
+  const src  = patients.find(x=>x.id===_trasladoPatientId);
+  const dest = patients.find(x=>x.id===bedId);
+  if (!dest.libre) { showToast('La cama destino ya no está libre'); return; }
+
+  const ts = new Date().toLocaleString('es-AR');
+
+  // Log in both beds
+  if (!history[src.id])  history[src.id]  = [];
+  if (!history[dest.id]) history[dest.id] = [];
+
+  const fromDesc = `Cama ${src.cama} (${wardLabel(src.ward)})`;
+  const toDesc   = `Cama ${dest.cama} (${wardLabel(dest.ward)})`;
+
+  history[src.id].unshift({ ts, user: currentUser, field:'traslado', before: fromDesc, after: toDesc });
+  history[dest.id].unshift({ ts, user: currentUser, field:'traslado', before: `(libre)`, after: `${src.nombre} desde ${fromDesc}` });
+
+  // Copy all patient data to dest bed, keeping dest's id/cama/ward
+  const savedDestId   = dest.id;
+  const savedDestCama = dest.cama;
+  const savedDestWard = dest.ward;
+
+  // Move patient data into dest slot
+  Object.assign(dest, src, { id: savedDestId, cama: savedDestCama, ward: savedDestWard });
+  delete dest.libre;
+
+  // Free origin bed
+  Object.keys(src).forEach(k => {
+    if (!['id','cama','ward'].includes(k)) delete src[k];
+  });
+  src.libre = true;
+
+  // Update current selection to follow the patient
+  currentPatient = dest;
+  editing = false;
+  pendingChanges = {};
+  document.getElementById('save-btn').disabled = true;
+
+  closeTraslado();
+  renderList();
+  renderDetail();
+  showToast(`${dest.nombre} trasladado/a a Cama ${dest.cama} · ${wardLabel(dest.ward)}`);
+}
+
+function closeTraslado() {
+  document.getElementById('traslado-overlay').classList.remove('open');
+  _trasladoPatientId = null;
+}
+
+function closeTrasladoOutside(e) {
+  if (e.target === document.getElementById('traslado-overlay')) closeTraslado();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
+
+// ── MOBILE ────────────────────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+// Patch selectPatient to slide detail pane on mobile
+var _origSelectPatient = selectPatient;
+selectPatient = function(id) {
+  _origSelectPatient(id);
+  if (isMobile()) {
+    var pane = document.getElementById('detail-pane');
+    pane.classList.add('mobile-open');
+    // Inject back button if not present
+    if (!pane.querySelector('.mobile-back-btn')) {
+      var btn = document.createElement('button');
+      btn.className = 'mobile-back-btn';
+      btn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Lista de camas';
+      btn.onclick = mobileBackToList;
+      pane.insertBefore(btn, pane.firstChild);
+    }
+    // Scroll detail to top
+    pane.scrollTop = 0;
+  }
+};
+
+function mobileBackToList() {
+  var pane = document.getElementById('detail-pane');
+  pane.classList.remove('mobile-open');
+}
+
+// Session sheet
+function toggleSessionSheet() {
+  var sheet = document.getElementById('session-sheet');
+  var overlay = document.getElementById('sheet-overlay');
+  var isOpen = sheet.classList.contains('open');
+  closeAllSheets();
+  if (!isOpen) {
+    sheet.classList.add('open');
+    overlay.classList.add('open');
+    // Sync mobile select with desktop select
+    var mSel = document.getElementById('user-select-mobile');
+    var dSel = document.getElementById('user-select');
+    mSel.value = dSel.value;
+    updateSessionSheetStatus();
+  }
+}
+
+function updateSessionSheetStatus() {
+  var el = document.getElementById('session-sheet-status');
+  if (!el) return;
+  if (currentUser) {
+    var me = usuarios.find(function(u){ return u.id === currentUserId; });
+    el.textContent = 'Sesión activa: ' + currentUser + (me ? ' · ' + (ROL_LABEL[me.rol]||me.rol) : '');
+    el.style.color = 'var(--ok)';
+    document.getElementById('bb-session-label').textContent = currentUser.split(' ')[0];
+    document.getElementById('bb-session').classList.add('active');
+  } else {
+    el.textContent = 'No hay sesión activa';
+    el.style.color = 'var(--muted)';
+    document.getElementById('bb-session-label').textContent = 'Sesión';
+    document.getElementById('bb-session').classList.remove('active');
+  }
+}
+
+function switchUserMobile() {
+  var mSel = document.getElementById('user-select-mobile');
+  var dSel = document.getElementById('user-select');
+  dSel.value = mSel.value;
+  switchUser();
+  updateSessionSheetStatus();
+  // Close sheet after 600ms so user sees feedback
+  setTimeout(closeAllSheets, 600);
+}
+
+// Filter sheet
+function toggleFilterSheet() {
+  var sheet = document.getElementById('filter-sheet');
+  var overlay = document.getElementById('sheet-overlay');
+  var isOpen = sheet.classList.contains('open');
+  closeAllSheets();
+  if (!isOpen) {
+    sheet.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+
+function setWardMobile(w, el) {
+  document.querySelectorAll('#ward-chips .mobile-filter-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  // Mirror to desktop
+  var wardItems = document.querySelectorAll('.ward-item');
+  wardItems.forEach(function(item){
+    if (item.textContent.trim().startsWith(w==='todos'?'Todo':
+        w==='piso1'?'1°':w==='uco'?'UCO':w==='obs'?'Observ':w==='pb'?'Planta':''))
+      item.click();
+  });
+  currentWard = w;
+  currentPatient = null;
+  renderList();
+}
+
+function setFilterMobile(f, el) {
+  document.querySelectorAll('#status-chips .mobile-filter-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  currentFilter = f;
+  renderList();
+}
+
+function closeAllSheets() {
+  document.getElementById('session-sheet').classList.remove('open');
+  document.getElementById('filter-sheet').classList.remove('open');
+  document.getElementById('sheet-overlay').classList.remove('open');
+}
+
+// Sync mobile user select whenever refreshUserSelect runs
+var _origRefreshUserSelect = refreshUserSelect;
+refreshUserSelect = function() {
+  _origRefreshUserSelect();
+  var dSel = document.getElementById('user-select');
+  var mSel = document.getElementById('user-select-mobile');
+  if (!mSel) return;
+  mSel.innerHTML = dSel.innerHTML;
+  mSel.value = dSel.value;
+  updateSessionSheetStatus();
+};
+
+// Handle browser back gesture on iOS to close detail pane
+window.addEventListener('popstate', function() {
+  var pane = document.getElementById('detail-pane');
+  if (pane && pane.classList.contains('mobile-open')) {
+    pane.classList.remove('mobile-open');
+    history.pushState(null, '', location.href); // keep in history
+  }
+});
+</script>
+<!--CLINICA_SYNC_PLACEHOLDER-->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ── Supabase config ──────────────────────────────────────────────
+var SB_URL = 'https://hebvxqwtyacqzezuxjau.supabase.co';
+var SB_KEY = 'sb_publishable_uBcrNM1BXb8tg-4tRDxnfw_j2JNBgpG';
+var sb     = supabase.createClient(SB_URL, SB_KEY);
+
+// ── Sync status indicator (top-right corner, no obstruye nada) ───
+var pill = document.createElement('div');
+pill.id  = 'sync-pill';
+pill.style.cssText = [
+  'position:fixed','top:54px','right:10px','z-index:9999',
+  'display:flex','align-items:center','gap:5px',
+  'background:rgba(255,255,255,.92)','border:1px solid rgba(0,0,0,.1)',
+  'border-radius:20px','padding:3px 9px 3px 6px',
+  'font-family:var(--mono,monospace)','font-size:10px','color:var(--muted,#6b6a63)',
+  'box-shadow:0 1px 6px rgba(0,0,0,.10)','pointer-events:none',
+  'transition:opacity .5s','opacity:0',
+].join(';');
+
+var pillDot = document.createElement('span');
+pillDot.style.cssText = 'width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .4s';
+var pillLbl = document.createElement('span');
+pillLbl.textContent = '';
+pill.appendChild(pillDot);
+pill.appendChild(pillLbl);
+document.body.appendChild(pill);
+
+var hideTimer;
+function setStatus(color, text, persist) {
+  pillDot.style.background = color;
+  pillLbl.textContent = text;
+  pill.style.opacity = '1';
+  clearTimeout(hideTimer);
+  if (!persist) {
+    hideTimer = setTimeout(function(){ pill.style.opacity = '0'; }, 3000);
+  }
+}
+
+// ── Debounce push ────────────────────────────────────────────────
+var pushTimer;
+function schedulePush() {
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushToSupabase, 400);
+}
+
+// ── Push state to Supabase ───────────────────────────────────────
+function pushToSupabase() {
+  if (typeof patients === 'undefined') return;
+  var payload = {
+    id: 'main',
+    data: {
+      patients: patients,
+      usuarios: usuarios,
+      history:  history,
+      visits:   visits,
+      pushedAt: new Date().toISOString(),
+    },
+    updated_at: new Date().toISOString(),
+  };
+  sb.from('clinica_state')
+    .upsert(payload, { onConflict: 'id' })
+    .then(function(res) {
+      if (res.error) {
+        console.error('[Supabase] Error guardando:', res.error.message);
+        setStatus('#e87a7a', 'error al guardar');
+      } else {
+        setStatus('#5cbb7a', 'guardado ✓');
+      }
+    });
+}
+
+// ── Apply remote state ───────────────────────────────────────────
+var _lastPushedAt = null;
+function applyRemote(data) {
+  if (!data || !data.patients) return;
+  if (data.pushedAt && data.pushedAt === _lastPushedAt) return;
+
+  var changed = false;
+  if (JSON.stringify(data.patients) !== JSON.stringify(patients)) {
+    patients = data.patients; changed = true;
+  }
+  if (data.usuarios && JSON.stringify(data.usuarios) !== JSON.stringify(usuarios)) {
+    usuarios = data.usuarios;
+    if (typeof refreshUserSelect === 'function') refreshUserSelect();
+    if (typeof populateLoginSelect === 'function') populateLoginSelect();
+  }
+  if (data.history) history = data.history;
+  if (data.visits)  visits  = data.visits;
+
+  if (changed) {
+    if (typeof renderList === 'function') renderList();
+    if (typeof currentPatient !== 'undefined' && currentPatient) {
+      var fresh = patients.find(function(p){ return p.id === currentPatient.id; });
+      if (fresh) { currentPatient = fresh; if (typeof renderDetail === 'function') renderDetail(); }
+    }
+    setStatus('#5cbb7a', 'actualizado');
+  }
+}
+
+// ── Load initial state from Supabase ────────────────────────────
+function loadFromSupabase() {
+  setStatus('#e8c97a', 'cargando…', true);
+  sb.from('clinica_state')
+    .select('data')
+    .eq('id', 'main')
+    .single()
+    .then(function(res) {
+      if (res.error) {
+        if (res.error.code === 'PGRST116') {
+          // No row yet — push local state (first run)
+          setStatus('#e8c97a', 'primera vez…', true);
+          setTimeout(function(){
+            pushToSupabase();
+            setStatus('#5cbb7a', 'base creada');
+            subscribeRealtime();
+          }, 800);
+        } else {
+          console.error('[Supabase] Error cargando:', res.error.message);
+          setStatus('#e87a7a', 'error conexión');
+        }
+        return;
+      }
+      if (res.data && res.data.data && res.data.data.patients) {
+        applyRemote(res.data.data);
+        setStatus('#5cbb7a', 'sincronizado');
+      } else {
+        // Row exists but empty — push our data
+        pushToSupabase();
+      }
+      subscribeRealtime();
+    });
+}
+
+// ── Realtime subscription ────────────────────────────────────────
+var channel;
+function subscribeRealtime() {
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel('clinica-realtime')
+    .on('postgres_changes', {
+      event:  'UPDATE',
+      schema: 'public',
+      table:  'clinica_state',
+      filter: 'id=eq.main',
+    }, function(payload) {
+      var data = payload.new && payload.new.data;
+      if (data) {
+        applyRemote(data);
+      }
+    })
+    .subscribe(function(status) {
+      if (status === 'SUBSCRIBED') {
+        setStatus('#5cbb7a', 'en vivo ✓');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        setStatus('#e87a7a', 'sin conexión');
+        setTimeout(subscribeRealtime, 5000);
+      }
+    });
+}
+
+// ── Patch app functions to auto-push on any change ───────────────
+function patchFn(name) {
+  var orig = window[name];
+  if (typeof orig !== 'function') return;
+  window[name] = function() {
+    var r = orig.apply(this, arguments);
+    _lastPushedAt = new Date().toISOString();
+    schedulePush();
+    return r;
+  };
+}
+
+// Wait for app init then wire everything up
+setTimeout(function() {
+  [
+    'commitChanges', 'toggleLibre', 'ejecutarTraslado', 'marcarVisitado',
+    'guardarUsuario', 'toggleUsuario', 'eliminarUsuario',
+    'cambiarPropiaPass', 'resetPass',
+  ].forEach(patchFn);
+  loadFromSupabase();
+}, 800);
+
+})();
+</script>
+
+<!-- Service Worker: permite uso offline y caché -->
+<script>
+if ('serviceWorker' in navigator) {
+  // Inline service worker via blob URL
+  var swCode = [
+    '"use strict";',
+    'var CACHE = "clinica-v1";',
+    'var PRECACHE = ["./"];',
+    'self.addEventListener("install", function(e){',
+    '  e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(PRECACHE); }));',
+    '  self.skipWaiting();',
+    '});',
+    'self.addEventListener("activate", function(e){',
+    '  e.waitUntil(clients.claim());',
+    '});',
+    'self.addEventListener("fetch", function(e){',
+    '  if(e.request.method !== "GET") return;',
+    '  var url = new URL(e.request.url);',
+    '  // No cachear llamadas a Supabase ni CDNs externos',
+    '  if(url.hostname !== location.hostname) return;',
+    '  e.respondWith(',
+    '    caches.match(e.request).then(function(cached){',
+    '      return cached || fetch(e.request).then(function(resp){',
+    '        var clone = resp.clone();',
+    '        caches.open(CACHE).then(function(c){ c.put(e.request, clone); });',
+    '        return resp;',
+    '      });',
+    '    })',
+    '  );',
+    '});',
+  ].join('\n');
+  var swBlob = new Blob([swCode], { type: 'application/javascript' });
+  var swUrl  = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl).catch(function(){});
+}
+</script>
+
+<!-- Banner de instalación (solo si no está instalada ya) -->
+<div id="install-banner" style="display:none;position:fixed;bottom:70px;left:12px;right:12px;
+  background:var(--accent);color:#fff;border-radius:12px;padding:14px 16px;
+  z-index:9998;box-shadow:0 4px 20px rgba(0,0,0,.25);
+  display:none;align-items:center;gap:12px;">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+    <rect x="5" y="2" width="14" height="20" rx="2"/>
+    <path d="M12 18h.01"/>
+  </svg>
+  <div style="flex:1;font-size:13px;line-height:1.4;">
+    <strong>Instalá la app</strong><br>
+    <span style="opacity:.85;font-size:12px;">Tocá Compartir → "Agregar a pantalla de inicio"</span>
+  </div>
+  <button onclick="document.getElementById('install-banner').style.display='none'"
+    style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;
+    padding:5px 10px;font-size:12px;cursor:pointer;font-family:var(--sans);flex-shrink:0;">
+    OK
+  </button>
+</div>
+<script>
+// Mostrar banner de instalación en iOS si no está instalada
+(function(){
+  var isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone = navigator.standalone === true;
+  var shown     = sessionStorage.getItem('install-banner-shown');
+  if (isIOS && !isStandalone && !shown) {
+    setTimeout(function(){
+      var b = document.getElementById('install-banner');
+      if (b) { b.style.display = 'flex'; sessionStorage.setItem('install-banner-shown','1'); }
+    }, 2500);
+  }
+})();
+</script>
+</body>
+</html>
