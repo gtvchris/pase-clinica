@@ -1327,7 +1327,7 @@ function init() {
   populateLoginSelect();
   updateStats();
   renderList();
-  // App stays hidden — shown only after successful login
+  // Mostrar login screen de inmediato — Supabase carga en segundo plano
 }
 
 // ── PANTALLA DE LOGIN ──────────────────────────────────────────────
@@ -2283,7 +2283,8 @@ function exportarPDF() {
   if (!win) { showToast('Permitir popups para exportar PDF'); return; }
   win.document.write(html);
   win.document.close();
-}────────────
+}
+
 const FIELD_LABELS = {
   diag:'Diagnóstico', antec:'Antecedentes', med:'Medicación',
   alergias:'Alergias', atb:'Antibióticos', pendientes:'Pendientes',
@@ -2925,16 +2926,18 @@ function applyRemote(data) {
 function loadFromSupabase() {
   setStatus('#e8c97a', 'cargando…', true);
 
-  // Timeout de 8 segundos — si Supabase no responde, cargamos igual con datos locales
   var done = false;
   var timeout = setTimeout(function() {
     if (done) return;
     done = true;
-    console.warn('[Supabase] Timeout — cargando con datos locales');
+    console.warn('[Supabase] Timeout — sin respuesta después de 8 segundos');
     setStatus('#e87a7a', 'sin conexión');
+    document.getElementById('ls-lockout').textContent = 'Sin conexión a Supabase — trabajando offline';
+    document.getElementById('ls-lockout').style.color = 'var(--warn)';
     _showLoginReady();
   }, 8000);
 
+  // Test rápido de conectividad antes de intentar Supabase
   sb.from('clinica_state')
     .select('data')
     .eq('id', 'main')
@@ -2945,15 +2948,17 @@ function loadFromSupabase() {
       clearTimeout(timeout);
 
       if (res.error) {
+        console.error('[Supabase] Error:', res.error.code, res.error.message);
         if (res.error.code === 'PGRST116') {
-          // Tabla vacía — primera vez, subimos los datos del DOCX
+          // Tabla vacía — primera vez
           setStatus('#e8c97a', 'primera vez…', true);
           pushToSupabase();
-          setStatus('#5cbb7a', 'datos iniciales subidos');
+          setStatus('#5cbb7a', 'conectado ✓');
           subscribeRealtime();
         } else {
-          console.error('[Supabase] Error:', res.error.message);
-          setStatus('#e87a7a', 'sin conexión');
+          setStatus('#e87a7a', 'error: ' + res.error.code);
+          document.getElementById('ls-lockout').textContent = 'Supabase: ' + res.error.message;
+          document.getElementById('ls-lockout').style.color = 'var(--warn)';
         }
         _showLoginReady();
         return;
@@ -2972,8 +2977,10 @@ function loadFromSupabase() {
       if (done) return;
       done = true;
       clearTimeout(timeout);
-      console.error('[Supabase] Exception:', e);
+      console.error('[Supabase] Exception:', e.message);
       setStatus('#e87a7a', 'sin conexión');
+      document.getElementById('ls-lockout').textContent = 'Error: ' + e.message;
+      document.getElementById('ls-lockout').style.color = 'var(--warn)';
       _showLoginReady();
     });
 }
@@ -3024,7 +3031,10 @@ function patchFn(name) {
   };
 }
 
-// Wait for app init then wire everything up
+// Mostrar login screen de inmediato — no esperar a Supabase
+populateLoginSelect();
+
+// Conectar Supabase en segundo plano
 setTimeout(function() {
   [
     'commitChanges', 'toggleLibre', 'ejecutarTraslado', 'marcarVisitado',
