@@ -687,9 +687,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 }
 
 /* Bottom bar — solo mobile */
-.bottom-bar {
-  display: none;
-}
+.bottom-bar { display: none; }
+.mobile-session-sheet { display: none; }
+.mobile-filter-sheet  { display: none; }
+.sheet-overlay        { display: none; }
+.mobile-back-btn      { display: none; }
 @media (max-width: 768px) {
   .bottom-bar {
     display: flex;
@@ -717,6 +719,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 
   /* Session selector in bottom sheet */
   .mobile-session-sheet {
+    display: block;
     position: fixed;
     bottom: 60px; left: 0; right: 0;
     background: var(--surface);
@@ -741,6 +744,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 
   /* Filter sheet */
   .mobile-filter-sheet {
+    display: block;
     position: fixed;
     bottom: 60px; left: 0; right: 0;
     background: var(--surface);
@@ -849,6 +853,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
       Cerrar sesión
     </button>
     <button class="log-btn" onclick="showLog()">Log del día</button>
+    <button class="log-btn" onclick="exportarPDF()" style="background:rgba(255,255,255,.22);">Exportar PDF</button>
     <button class="save-btn" id="save-btn" onclick="saveChanges()" disabled>Guardar cambios</button>
   </div>
 </div>
@@ -1251,58 +1256,54 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const PATIENTS_RAW = [
-  // 1° PISO
-  {id:'201-1',cama:'201-1',ward:'piso1',nombre:'LOBOS, PATRICIA GABRIELA',sexo:'♀',edad:45,ingreso:'25/03',diag:'IPPB',antec:'Epilepsia',med:'Lamotrigina 500mg c/8hs · Ácido Valproico 500mg c/8hs · Rivotril 0.5mg c/8hs · Levetirazetam 250mg c/12hs',alergias:'No refiere',atb:'PTZ 4.5G + Vancomicina 1G · FI: 31/03/26',pendientes:'Cumplir TTO ATB día 06/04. EVALUAR ALTA: LUNES',novedades:'---'},
-  {id:'202-1',cama:'202-1',ward:'piso1',libre:true},
-  {id:'201-2',cama:'201-2',ward:'piso1',nombre:'LORENZO VÁZQUEZ, MARÍA',sexo:'♀',edad:74,ingreso:'24/03',diag:'Fractura de cadera izquierda',antec:'Trastorno depresivo · Apendicectomía',med:'Clonazepam 2mg VO c/12h (08am y 20pm) · Paroxetina 20mg a las 8am',alergias:'No refiere',atb:'No',pendientes:'Resolución quirúrgica. Confirmar pedido de material x Traumatología',novedades:'---'},
-  {id:'202-2',cama:'202-2',ward:'piso1',nombre:'RAINERI, MIRTA IRENE',sexo:'♀',edad:66,ingreso:'02/04',diag:'EPOC exacerbado',antec:'EPOC · HTA · Policitemia',med:'Frevia 2 puff c/12hs · Amlodipina 10mg VO c/24hs',alergias:'No refiere',atb:'Levofloxacina 750mg EV c/24hs · FI: 02/04/2026',pendientes:'Laboratorio control · Rx de tórax · Evaluar alta',novedades:'---'},
-  {id:'203-1',cama:'203-1',ward:'piso1',nombre:'CÁCERES, MIRTA ISABEL',sexo:'♀',edad:67,ingreso:'25/03',diag:'Infección de sitio quirúrgico · POP Hemicolectomía derecha + Ileotransversoanastomosis · Tu colon · Íleo postquirúrgico',antec:'Ca de intestino · Diverticulitis · Apendicectomía · Colecistectomía',med:'No',alergias:'No refiere',atb:'PTZ / Vancomicina · FI: 01/04/26',pendientes:'---',novedades:'Pase de UTI (01/04)'},
+  {id:'201-1',cama:'201-1',ward:'piso1',nombre:'LOBOS, PATRICIA GABRIELA',sexo:'♀',edad:45,ingreso:'25/03',diag:'IPPB',antec:'Epilepsia',med:'Lamotrigina 500mg c/8hs · Ácido Valproico 500mg c/8hs · Rivotril 0.5mg c/8hs · Levetirazetam 250mg c/12hs',alergias:'No refiere',atb:'PTZ 4.5G + Vancomicina 1G · FI: 31/03/26',pendientes:'Cumplir TTO ATB día 06/04. EVALUAR ALTA: LUNES',novedades:''},
+  {id:'201-2',cama:'201-2',ward:'piso1',nombre:'LORENZO VÁZQUEZ, MARÍA',sexo:'♀',edad:74,ingreso:'24/03',diag:'Fractura de cadera izquierda',antec:'Trastorno depresivo · Apendicectomía',med:'Clonazepam 2mg VO c/12h (08am y 20pm) · Paroxetina 20mg a las 8am',alergias:'No refiere',atb:'No',pendientes:'Resolución quirúrgica. Confirmar pedido de material x Traumatología',novedades:''},
+  {id:'202-1',cama:'202-1',ward:'piso1',nombre:'BERTALLO, ELSA MARLENE',sexo:'♀',edad:null,ingreso:'06/04/26',diag:'Fractura de cadera',antec:'No refiere',med:'Pregabalina 75mg VO c/24hs 20:00',alergias:'No refiere',atb:'No',pendientes:'Definir fecha CX, control lab',novedades:''},
+  {id:'202-2',cama:'202-2',ward:'piso1',nombre:'RAINERI, MIRTA IRENE',sexo:'♀',edad:66,ingreso:'02/04',diag:'EPOC exacerbado',antec:'EPOC · HTA · Policitemia',med:'Frevia 2 puff c/12hs · Amlodipina 10mg VO c/24hs',alergias:'No refiere',atb:'Levofloxacina 750mg EV c/24hs · FI: 02/04/2026',pendientes:'Laboratorio control · Rx de tórax · Evaluar alta',novedades:''},
+  {id:'203-1',cama:'203-1',ward:'piso1',nombre:'CÁCERES, MIRTA ISABEL',sexo:'♀',edad:67,ingreso:'25/03',diag:'Infección de sitio quirúrgico · POP Hemicolectomía derecha + Ileotransversoanastomosis · Tu colon · Íleo postquirúrgico',antec:'Ca de intestino · Diverticulitis · Apendicectomía · Colecistectomía',med:'No',alergias:'No refiere',atb:'PTZ / Vancomicina · FI: 01/04/26',pendientes:'',novedades:'Pase de UTI (01/04)'},
   {id:'203-2',cama:'203-2',ward:'piso1',libre:true},
-  {id:'203-3',cama:'203-3',ward:'piso1',libre:true},
-  {id:'204-1',cama:'204-1',ward:'piso1',nombre:'SÁNCHEZ, FLORENTINA',sexo:'♀',edad:82,ingreso:'23/01',diag:'Demencia asociada a Parkinson · ITU en tratamiento · KPC positivo',antec:'Parkinson rígido · HTA · Ansiedad',med:'Levocar VO c/8hs · Carvedilol 3.125 VO 08:00 · Carvedilol 6.125 VO 20:00 · Selegilina VO c/24hs · Donepecilo VO c/24hs · Ezetimibe VO c/24hs · ASS 100mg VO c/24hs · Clonazepam 2mg VO cada noche',alergias:'No refiere',atb:'Levofloxacina 750mg VO c/día · FI: 30/3/2026',pendientes:'En espera traslado a geriátrico. Corroborar trámites geriátrico. Lab control',novedades:'---'},
-  {id:'204-2',cama:'204-2',ward:'piso1',nombre:'SALINAS, ROSA INÉS',sexo:'♀',edad:74,ingreso:'10/12/25',diag:'Caso social · POP artroplastia total de cadera doble movilidad · Hiponatremia moderada · Luxación de prótesis',antec:'HTA · DM tipo 2 · Anemia crónica · Hipotiroidismo · HDB por divertículos sangrantes · Diverticulectomía · Prótesis vertebral · Colecistectomía',med:'Vidagliptina/Metformina 50/850mg · Losartán 100mg · Continez 15 · Napruz 500mg · Levotiroxina 175mcg · Aspirina · Merital · Diosmina Hesperidina · Pantus',alergias:'No registrada',atb:'No',pendientes:'En espera de geriátrico · Resolución quirúrgica luxación cadera · Lab control post hemotransfusión',novedades:'Hemotransfusión 1 UND GB (01/04)'},
-  {id:'205',cama:'205',ward:'piso1',nombre:'LANDEYRA, CARLOS ALBERTO',sexo:'♂',edad:76,ingreso:'28/02',diag:'Infección en columna',antec:'DM IRQ · HTA · ICC · Arritmia · ACO · Neuropatía diabética · Retinopatía · Dislipidemia · Portador MCP recambio hace 1 mes · Obesidad · Extabaquista · ERC · Hipoacusia bilateral · Escara sacra',med:'Bisoprolol 5mg c/12hs · Atorvastatina 10mg/día · Ácido tióctico 600mg/día · Vildagliptina 50mg antes almuerzo y cena · Ácido ascórbico 200mg/día · Sintrom · Insulina Lantus 32UI cena · Insulina rápida según HGT · Timolol gotas oftálmicas',alergias:'NITROFURANTOÍNA',atb:'Colistin 100mg c/12h EV + Tigeciclina 50mg c/12h EV · FI: 11/03',pendientes:'Interconsulta con Neurocirugía desde (26/03)?',novedades:'03/03: AMS 1.5 x dos días → PTZ 4,5G c/6h\n09/03: Urocultivo — Klebsiella pneumoniae sensible Vancomicina + Sulfametoxazol/Trimetroprina\n11/03: Rotación ATB → Colistin 100mg c/12h EV + Tigeciclina 50mg c/12h\n19/03: Transfusión 3 UND PFC\n26/03: TAC — proceso inflamatorio/infeccioso disco L4-L5'},
-  {id:'206',cama:'206',ward:'piso1',nombre:'ROMERO, LEONARDO FABIO',sexo:'♂',edad:24,ingreso:'03/04',diag:'Anemia moderada sintomática con requerimiento de hemotransfusión · Úlcera grado 2 con sangrado activo',antec:'Mielomeningocele congénito (silla de ruedas) · Anemia crónica · Osteomielitis crónica en talón · Incontinencia urofecal · ITU a repetición',med:'Hierro 100mg VO c/día · Oxibutinina 10mg VO c/12hs',alergias:'No refiere',atb:'Clindamicina 300mg EV c/6hs · FI: 29/03/2026',pendientes:'Lab control post hemotransfusión',novedades:'03/04: Hemotransfusión 1 UND GR'},
-  {id:'207',cama:'207',ward:'piso1',nombre:'IBALO, MARTA ELENA',sexo:'♀',edad:66,ingreso:'30/03',diag:'Deshidratación severa con alteración de electrolitos asociado a cuadro infeccioso urinario',antec:'ACV · DBT tipo 2 insulinorrequiriente · IR · Colecistectomía',med:'Haloperidol 10mg VO c/24hs 08:00 · Insulina 15 UI en las mañanas',alergias:'No refiere',atb:'Bactrim 480mg/ml EV c/12hs FI: 31/3 · Metronidazol 500mg EV c/8hs FI: 1/4',pendientes:'---',novedades:'---'},
-  {id:'208',cama:'208',ward:'piso1',nombre:'SOSA, MARÍA SINFORIANA',sexo:'♀',edad:68,ingreso:'27/03',diag:'Gastroenteritis no infecciosa · Hiponatremia severa',antec:'Artritis reumatoidea · EPOC · Dislipidemia · Colecistectomía · Cirugía túnel carpiano bilateral',med:'Leflunomida 20mg VO post desayuno · Atorvastatina 10mg VO 21:00 · Ácido fólico 10mg VO viernes · Metotrexate 15mg VO martes · Salbutamol 2 puff c/disnea',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'03/04: Hemotransfusión 3 UND PFC'},
-  {id:'209',cama:'209',ward:'piso1',nombre:'FERNÁNDEZ, JOSÉ LUIS',sexo:'♂',edad:89,ingreso:'30/03',diag:'Anasarca · ICC descompensada · ITU',antec:'HTA · Ca de colon · EPOC · Angioplastia 3 stents · Colostomía',med:'Tamsulosina 0,4mg VO noche · Clonazepam 0,5mg VO noche · Losartán 50mg VO c/12h · Bisoprolol 2,5mg VO c/12h · Atorvastatina 20mg VO noche · Clopidogrel 75mg VO c/día · ASS 100mg VO c/día · Tiotropio 2 puffs c/24h · Frevia 2 puffs c/12h',alergias:'No refiere',atb:'TMS 160mg EV c/12hs · FI: 29/03/2026',pendientes:'Lab control',novedades:'---'},
-  {id:'210',cama:'210',ward:'piso1',libre:true},
-  {id:'211',cama:'211',ward:'piso1',nombre:'MARTÍNEZ, ANA MARÍA',sexo:'♀',edad:67,ingreso:'02/04',diag:'Tetania muscular · Hipocalcemia + Hipomagnesemia severas',antec:'HTA · ERC · Arritmia cardíaca · Colecistectomía · Cesárea (1) · Apendicectomía · Osteosíntesis tobillo derecho',med:'Amlodipina 10mg VO post desayuno · Enalapril 10mg VO c/12hs · Nebivolol 10mg VO 20:00 · Alprazolam 0,5mg VO c/12hs · Atorvastatina 10mg VO 21:00',alergias:'No refiere',atb:'No',pendientes:'Lab control',novedades:'---'},
-  {id:'212-1',cama:'212-1',ward:'piso1',nombre:'LA PAZ CASTILLO, ALCIDES BISMAR',sexo:'♂',edad:80,ingreso:'02/03',diag:'Celulitis de piel y partes blandas',antec:'HTA · Arritmia · HPB',med:'Leflunomida 20mg VO post desayuno · Atorvastatina 10mg VO 21:00 · Ácido fólico 10mg VO viernes · Metotrexate 15mg VO martes · Salbutamol 2 puff c/disnea',alergias:'No refiere',atb:'PTZ 4,5g 1.5g c/6hs + Vancomicina 1g c/12hs EV · FI: 19/03',pendientes:'---',novedades:'Meropenem 500mg c/8hs (03/3–11/3)\nVancomicina 1g c/día (04/3–11/3)\nInternación UTI (03/03–16/03)\n17/3: AMS 1.5g c/6hs + Claritromicina 500mg c/12hs EV (17/3–19/3)\n18/3: Transfusión 1 UND GRD\n19/3: Rotación ATB → PTZ 4,5g c/6hs + Vancomicina 1g c/12hs EV'},
-  {id:'212-2',cama:'212-2',ward:'piso1',libre:true},
-  {id:'213-1',cama:'213-1',ward:'piso1',nombre:'ESPÍNOLA, VICTORINA',sexo:'♀',edad:77,ingreso:'13/10/25',diag:'En espera de tercer nivel (geriátrico)',antec:'EPOC oxigenodependiente · Fibrosis pulmonar',med:'O2 4 lts/min continuo cánula nasal · Neumoterol 400mcg c/12hs · Salmeterol/Fluticasona 1 cáp inhalada c/12hs · Tiotropio 2 cáps c/24hs · Montelukast 10mg VO 18:00 · Deltisona B 8mg ½ comp VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'En condiciones de alta a geriátrico'},
-  {id:'213-2',cama:'213-2',ward:'piso1',nombre:'MALDONADO, MARGARITA BEATRIZ',sexo:'♀',edad:90,ingreso:'12/02/26',diag:'Caso social · En espera de tercer nivel (geriátrico)',antec:'HTA · Depresión · Demencia senil · RTC bilateral',med:'Sertralina 50mg VO c/día · Amlodipina 5mg VO c/día desayuno · Cilostazol 50mg VO c/día · Nebivolol 2,5mg VO post desayuno',alergias:'No refiere',atb:'PTZ 4.5g c/6hs EV · FI: 01/04/26 (por diarrea)',pendientes:'---',novedades:'---'},
-  {id:'214-1',cama:'214-1',ward:'piso1',nombre:'ÁLVAREZ, RAÚL ROLANDO',sexo:'♂',edad:67,ingreso:'30/03/26',diag:'EPOC exacerbado · NAC',antec:'EPOC',med:'No',alergias:'No refiere',atb:'No',pendientes:'Destete O2 · Lab control',novedades:'---'},
-  {id:'214-2',cama:'214-2',ward:'piso1',nombre:'LÓPEZ, JUAN RAÚL',sexo:'♂',edad:72,ingreso:'30/03/26',diag:'Úlcera infectada MID',antec:'HPB · Fractura de tobillo',med:'Tamsulosina 4mg VO 20:00',alergias:'No refiere',atb:'PTZ 4.5g + Vancomicina 1g · FI: 30/03/26',pendientes:'Lab control · Ecodoppler arterio-venoso MMII',novedades:'---'},
-  {id:'215-1',cama:'215-1',ward:'piso1',nombre:'QUIROGA, ROGELIO HIGINIO',sexo:'♂',edad:69,ingreso:'27/03/26',diag:'Síndrome coledociano',antec:'HTA · Diabetes insulinodependiente · Artroplastia meniscos rodilla izquierda',med:'Metformina 850mg VO c/día · Sitagliptina 100mg VO c/día ayunas · Losartán 100mg VO c/día · AAS 100mg VO c/día · Insulina NPH 20UI AM / 24UI 12:00 / 29UI PM 20:00 · Correcciones Insulina rápida Glulisina',alergias:'No refiere',atb:'AMS 3g EV c/6h · FI: 27/03/26',pendientes:'IC con Cirugía · Lab control',novedades:'20/03/26: Ecografía abdominal — vesícula multilitiásica'},
-  {id:'215-2',cama:'215-2',ward:'piso1',nombre:'CARDOZO, FERNANDO ALFREDO',sexo:'♂',edad:71,ingreso:'22/03/26',diag:'Osteomielitis de rodilla',antec:'HTA · Diabetes insulinodependiente · Artroplastia meniscos rodilla izquierda',med:'Metformina 850mg VO c/día · Sitagliptina 100mg VO c/día ayunas · Losartán 100mg VO c/día · AAS 100mg VO c/día · Insulina NPH 20UI AM / 24UI 12:00 / 29UI PM 20:00 · Correcciones Insulina rápida Glulisina',alergias:'No refiere',atb:'Imipenem 500mg c/6hs EV · Amikacina 1g c/24hs · Ceftazidima 1g c/12hs · FI: 26/02',pendientes:'IC con Cirugía · Lab control',novedades:'04/02/26: Toilette QX + Capsulorrafia. Alta por Cirugía\n18/02/26: Cultivo — Klebsiella pneumoniae multirresistente (sensible Amikacina, Imipenem, Ceftazidima)\n03/03/26: Trámite compra ATB internación domiciliaria'},
-  {id:'216-1',cama:'216-1',ward:'piso1',libre:true},
-  {id:'216-2',cama:'216-2',ward:'piso1',nombre:'CASTRO, JOSÉ RAMÓN',sexo:'♂',edad:67,ingreso:'16/02/26',diag:'Caso social · EPOC',antec:'EPOC · TBQ activo · Cirugía pulmón · HTA',med:'Valsartán 160mg c/12hs VO · Amlodipino 10mg c/día si TA >140/90 · Neumotide 2 puff c/8hs · Salbutamol 2 puff c/8hs · Sertralina 50mg 20:00 · Bromuro de ipratropio 2 puff c/12hs',alergias:'No refiere',atb:'---',pendientes:'---',novedades:'19/03: Familiares firman NR'},
+  {id:'203-3',cama:'203-3',ward:'piso1',nombre:'PERRONE, CECILIA DEL VALLE',sexo:'♀',edad:80,ingreso:'06/04/26',diag:'POP de osteosíntesis de cadera con mal manejo del dolor',antec:'HTA · Colecistectomía · Osteosíntesis de cadera derecha · Sondada crónica',med:'Aspirina 100mg · Valsartán 160mg 9am · Valsartán 160mg 9pm',alergias:'No refiere',atb:'No',pendientes:'Lab de ingreso',novedades:''},
+  {id:'204-1',cama:'204-1',ward:'piso1',nombre:'SÁNCHEZ, FLORENTINA',sexo:'♀',edad:82,ingreso:'23/01',diag:'Demencia asociada a Parkinson · ITU en tratamiento · KPC positivo',antec:'Parkinson rígido · HTA · Ansiedad',med:'Levocar VO c/8hs · Carvedilol 3.125 VO 08:00 · Carvedilol 6.125 VO 20:00 · Selegilina VO c/24hs · Donepecilo VO c/24hs · Ezetimibe VO c/24hs · ASS 100mg VO c/24hs · Clonazepam 2mg VO cada noche',alergias:'No refiere',atb:'Levofloxacina 750mg VO c/día · FI: 30/3/2026',pendientes:'En espera traslado a geriátrico. Corroborar trámites geriátrico. Lab control',novedades:''},
+  {id:'204-2',cama:'204-2',ward:'piso1',nombre:'SALINAS, ROSA INÉS',sexo:'♀',edad:74,ingreso:'10/12/25',diag:'Caso social · POP artroplastia total de cadera doble movilidad · Hiponatremia moderada · Luxación de prótesis',antec:'HTA · DM tipo 2 · Anemia crónica · Hipotiroidismo · HDB por divertículos sangrantes · Diverticulectomía · Prótesis vertebral · Colecistectomía',med:'Vidagliptina/Metformina 50/850mg · Losartán 100mg · Continez 15 · Napruz 500mg · Levotiroxina 175mcg · Aspirina · Merital · Diosmina Hesperidina · Pantus',alergias:'No registrada',atb:'No',pendientes:'En espera de geriátrico · En espera resolución quirúrgica luxación cadera · Lab control post hemotransfusión',novedades:'Hemotransfusión 1 UND GB (01/04)'},
+  {id:'205',cama:'205',ward:'piso1',nombre:'LANDEYRA, CARLOS ALBERTO',sexo:'♂',edad:76,ingreso:'28/02',diag:'Infección en columna',antec:'DM IRQ · HTA · ICC · Arritmia · ACO · Neuropatía diabética · Retinopatía · Dislipidemia · Portador MCP recambio hace 1 mes · Obesidad · Extabaquista · ERC · Hipoacusia bilateral · Escara sacra',med:'Bisoprolol 5mg c/12hs · Atorvastatina 10mg/día · Ácido tióctico 600mg/día · Vildagliptina 50mg antes almuerzo y cena · Ácido ascórbico 200mg/día · Sintrom 1/2-1/4-1/2-1/4-1/4-1/2-1/4 · Insulina Lantus 32UI cena · Insulina rápida según HGT · Timolol gotas oftálmicas',alergias:'NITROFURANTOÍNA',atb:'Colistin 100mg c/12h EV + Tigeciclina 50mg c/12h EV · FI: 11/03',pendientes:'Interconsulta con Neurocirugía desde (26/03)?',novedades:'03/03: AMS 1.5 x dos días → PTZ 4,5G c/6h\n09/03: Urocultivo — Klebsiella pneumoniae sensible Vancomicina + Sulfametoxazol/Trimetroprina\n11/03: Rotación ATB → Colistin 100mg c/12h EV + Tigeciclina 50mg c/12h\n19/03: Transfusión 3 UND PFC\n26/03: TAC — proceso inflamatorio/infeccioso disco L4-L5'},
+  {id:'206',cama:'206',ward:'piso1',nombre:'ROMERO, LEONARDO FABIO',sexo:'♂',edad:24,ingreso:'03/04',diag:'Anemia moderada sintomática con requerimiento de hemotransfusión · Úlcera grado 2 con sangrado activo',antec:'Mielomeningocele congénito con pérdida de sensibilidad de MMII (silla de ruedas) · Anemia crónica · Osteomielitis crónica en talón · Incontinencia urofecal · ITU a repetición',med:'Hierro 100mg VO c/día · Oxibutinina 10mg VO c/12hs',alergias:'No refiere',atb:'Clindamicina 300mg EV c/6hs · FI: 29/03/2026',pendientes:'Lab control post hemotransfusión',novedades:'03/04: Hemotransfusión 1 UND GR'},
+  {id:'207',cama:'207',ward:'piso1',libre:true},
+  {id:'208',cama:'208',ward:'piso1',nombre:'SOSA, MARÍA SINFORIANA',sexo:'♀',edad:68,ingreso:'27/03',diag:'Gastroenteritis no infecciosa · Hiponatremia severa',antec:'Artritis reumatoidea · EPOC · Dislipidemia · Colecistectomía · Cirugía túnel carpiano bilateral',med:'Leflunomida 20mg VO post desayuno · Atorvastatina 10mg VO 21:00 · Ácido fólico 10mg VO viernes · Metotrexate 15mg VO martes · Salbutamol 2 puff c/disnea',alergias:'No refiere',atb:'No',pendientes:'',novedades:'03/04: Hemotransfusión 3 UND PFC'},
+  {id:'209',cama:'209',ward:'piso1',nombre:'FERNÁNDEZ, JOSÉ LUIS',sexo:'♂',edad:89,ingreso:'30/03',diag:'Anasarca · ICC descompensada · ITU',antec:'HTA · Ca de colon · EPOC · Angioplastia 3 stents · Colostomía',med:'Tamsulosina 0,4mg VO c/noche · Clonazepam 0,5mg VO c/noche · Losartán 50mg VO c/12h · Bisoprolol 2,5mg VO c/12h · Atorvastatina 20mg VO 20:00 · Clopidogrel 75mg VO c/día 08:00 · ASS 100mg VO c/día 08:00 · Tiotropio 2 puffs c/24h · Frevia 2 puffs c/12h',alergias:'No refiere',atb:'TMS 160mg EV c/12hs · FI: 29/03/2026',pendientes:'Lab control',novedades:''},
+  {id:'210',cama:'210',ward:'piso1',nombre:'SOTELO, BERNARDO JOSÉ',sexo:'♂',edad:69,ingreso:'06/04/26',diag:'Hemoptisis · Disminución de peso',antec:'Fumador activo · Demencia · Psicosis',med:'No refiere',alergias:'No refiere',atb:'Piperacilina + Tazobactam 4.5g EV c/6hs · FI: 06/04/2026',pendientes:'TAC pulmonar · Laboratorio ingreso · BAAR?',novedades:'Descartar proceso fibrótico vs masa pulmonar'},
+  {id:'211',cama:'211',ward:'piso1',nombre:'MARTÍNEZ, ANA MARÍA',sexo:'♀',edad:67,ingreso:'02/04',diag:'Tetania muscular · Hipocalcemia + Hipomagnesemia severas',antec:'HTA · ERC · Arritmia cardíaca · Colecistectomía · Cesárea (1) · Apendicectomía · Osteosíntesis tobillo derecho',med:'Amlodipina 10mg VO post desayuno · Enalapril 10mg VO c/12hs · Nebivolol 10mg VO 20:00 · Alprazolam 0,5mg VO c/12hs · Atorvastatina 10mg VO 21:00',alergias:'No refiere',atb:'No',pendientes:'Lab control',novedades:''},
+  {id:'212-1',cama:'212-1',ward:'piso1',nombre:'LA PAZ CASTILLO, ALCIDES BISMAR',sexo:'♂',edad:80,ingreso:'02/03',diag:'Celulitis de piel y partes blandas',antec:'HTA · Arritmia · HPB',med:'Leflunomida 20mg VO post desayuno · Atorvastatina 10mg VO 21:00 · Ácido fólico 10mg VO viernes · Metotrexate 15mg VO martes · Salbutamol 2 puff c/disnea',alergias:'No refiere',atb:'PTZ 4,5g 1.5g c/6hs + Vancomicina 1g c/12hs EV · FI: 19/03',pendientes:'',novedades:'Meropenem 500mg c/8hs (03/3–11/3)\nVancomicina 1g c/día (04/3–11/3)\nInternación UTI (03/03–16/03)\n17/3: AMS 1.5g c/6hs + Claritromicina 500mg c/12hs EV (17/3–19/3)\n18/3: Transfusión 1 UND GRD\n19/3: Rotación ATB → PTZ 4,5g c/6hs + Vancomicina 1g c/12hs EV'},
+  {id:'212-2',cama:'212-2',ward:'piso1',nombre:'STURZEN, CARLOS ALFREDO',sexo:'♂',edad:83,ingreso:'06/04/26',diag:'Deterioro sensorial',antec:'HTA',med:'Amlodipina 10mg VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'Descartar organicidad · IC con Psiquiatría',novedades:''},
+  {id:'213-1',cama:'213-1',ward:'piso1',nombre:'ESPÍNOLA, VICTORINA',sexo:'♀',edad:77,ingreso:'13/10/25',diag:'En espera de tercer nivel (geriátrico)',antec:'EPOC oxigenodependiente · Fibrosis pulmonar',med:'O2 4 lts/min continuo cánula nasal · Neumoterol 400mcg c/12hs · Salmeterol/Fluticasona 1 cáp inhalada c/12hs · Tiotropio 2 cáps c/24hs · Montelukast 10mg VO 18:00 · Deltisona B 8mg ½ comp VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'',novedades:'En condiciones de alta a geriátrico'},
+  {id:'213-2',cama:'213-2',ward:'piso1',nombre:'MALDONADO, MARGARITA BEATRIZ',sexo:'♀',edad:90,ingreso:'12/02/26',diag:'Caso social · En espera de tercer nivel (geriátrico)',antec:'HTA · Depresión · Demencia senil · RTC bilateral',med:'Sertralina 50mg VO c/día · Amlodipina 5mg VO c/día desayuno · Cilostazol 50mg VO c/día · Nebivolol 2,5mg VO post desayuno',alergias:'No refiere',atb:'PTZ 4.5g c/6hs EV · FI: 01/04/26 (por diarrea)',pendientes:'',novedades:''},
+  {id:'214-1',cama:'214-1',ward:'piso1',nombre:'ÁLVAREZ, RAÚL ROLANDO',sexo:'♂',edad:67,ingreso:'30/03/26',diag:'EPOC exacerbado · NAC',antec:'EPOC',med:'No',alergias:'No refiere',atb:'No',pendientes:'Destete O2 · Lab control',novedades:''},
+  {id:'214-2',cama:'214-2',ward:'piso1',libre:true},
+  {id:'215-1',cama:'215-1',ward:'piso1',nombre:'QUIROGA, ROGELIO HIGINIO',sexo:'♂',edad:69,ingreso:'27/03/26',diag:'Síndrome coledociano',antec:'HTA · Diabetes insulinodependiente · Artroplastia meniscos rodilla izquierda',med:'Metformina 850mg VO c/día · Sitagliptina 100mg VO c/día ayunas · Losartán 100mg VO c/día · AAS 100mg VO c/día · Insulina NPH 20UI AM / 24UI 12:00 / 29UI PM 20:00 · Correcciones insulina rápida Glulisina',alergias:'No refiere',atb:'AMS 3g EV c/6h · FI: 27/03/26',pendientes:'IC con Cirugía · Lab control',novedades:'20/03/26: Ecografía abdominal — vesícula multilitiásica'},
+  {id:'215-2',cama:'215-2',ward:'piso1',nombre:'CARDOZO, FERNANDO ALFREDO',sexo:'♂',edad:71,ingreso:'22/03/26',diag:'Osteomielitis de rodilla',antec:'HTA · Diabetes insulinodependiente · Artroplastia meniscos rodilla izquierda',med:'Metformina 850mg VO c/día · Sitagliptina 100mg VO c/día ayunas · Losartán 100mg VO c/día · AAS 100mg VO c/día · Insulina NPH 20UI AM / 24UI 12:00 / 29UI PM 20:00 · Correcciones insulina rápida Glulisina',alergias:'No refiere',atb:'Imipenem 500mg c/6hs EV · Amikacina 1g c/24hs · Ceftazidima 1g c/12hs · FI: 26/02',pendientes:'IC con Cirugía · Lab control',novedades:'04/02/26: Toilette QX + Capsulorrafia. Alta por Cirugía\n18/02/26: Cultivo — Klebsiella pneumoniae multirresistente (sensible Amikacina, Imipenem, Ceftazidima)\n03/03/26: Trámite compra ATB internación domiciliaria'},
+  {id:'216-1',cama:'216-1',ward:'piso1',nombre:'RAGO, VICTOR',sexo:'♂',edad:69,ingreso:'06/04/26',diag:'Bicitopenia (Anemia + Plaquetopenia)',antec:'HTA · DM2 · ICC · Hernia discal · Bypass coronario · Espondiloartrosis · Bloqueo del dolor',med:'Mononitrato de isosorbide VO c/8hs · Vastarel VO c/12hs · Carvedilol 25mg VO mañana 08:00 · Carvedilol 12.5mg VO noche 20:00 · Vildagliptina VO c/12hs · Metformina 500mg VO post merienda · Alprazolam 1mg VO 20:00 · Rosuvastatina 20mg VO 20:00 · Omeprazol 20mg VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'',novedades:''},
+  {id:'216-2',cama:'216-2',ward:'piso1',nombre:'CASTRO, JOSÉ RAMÓN',sexo:'♂',edad:67,ingreso:'16/02/26',diag:'Caso social · EPOC',antec:'EPOC · TBQ activo · Cirugía pulmón · HTA',med:'Valsartán 160mg c/12hs VO · Amlodipino 10mg c/día si TA >140/90 · Neumotide 2 puff c/8hs · Salbutamol 2 puff c/8hs · Sertralina 50mg 20:00 · Bromuro de ipratropio 2 puff c/12hs',alergias:'No refiere',atb:'',pendientes:'',novedades:'19/03: Familiares firman NR'},
   {id:'217-1',cama:'217-1',ward:'piso1',libre:true},
-  {id:'217-2',cama:'217-2',ward:'piso1',nombre:'BAGOLÍN, HORACIO EMILIO',sexo:'♂',edad:69,ingreso:'01/04/26',diag:'Hematuria franca · ITU · Insuficiencia renal',antec:'HPB · Parkinson · Ca renal · Nefrectomía',med:'Medopar 250mg VO c/24hs · Tamsulosina 0.4mcg VO c/24hs',alergias:'No refiere',atb:'AMS 1.5g EV c/8hs · FI: 01/04/2026',pendientes:'---',novedades:'---'},
-  // UCO
-  {id:'107-1',cama:'107-1',ward:'uco',libre:true},
-  {id:'107-2',cama:'107-2',ward:'uco',nombre:'CORREA, NÉSTOR RUBÉN',sexo:'♂',edad:76,ingreso:'30/03/26',diag:'Angina',antec:'IAM 2013 con 3 stents · IC FEY 33% · IC descompensada · FA anticoagulado · Shock mixto séptico-cardiogénico · EPOC',med:'AAS 100mg/día · Bisoprolol 2,5mg 08:00 · Valsartán 80mg 08:00 · Atorvastatina 40mg 08:00 · Dapagliflozina 10mg 08:00 · Espironolactona 25mg 08:00 · Rivaroxabán 15mg 08:00 · Budesonide 2 puffs c/8hs · Bromuro de ipratropio 2 puffs c/12hs',alergias:'No refiere',atb:'No',pendientes:'Realización CCG para el martes 07/04/26',novedades:'---'},
-  {id:'108-1',cama:'108-1',ward:'uco',nombre:'SPADAFORA, ELVIRA',sexo:'♀',edad:87,ingreso:'01/04/26',diag:'Insuficiencia respiratoria aguda',antec:'HTA · Cardiopatía · Angioplastia hace 9 años con stents',med:'Lorazepam 2.5mg VO noche 20:00 · Atorvastatina 20mg VO noche 20:00 · Espironolactona 25mg VO c/24hs · ASS 100mg VO c/24hs 08:00 · Losartán 50mg VO c/24hs 08:00',alergias:'No refiere',atb:'Levofloxacino 750mg EV c/24hs · FI: 01/04/2026',pendientes:'Lab control · Evaluar alta',novedades:'---'},
+  {id:'217-2',cama:'217-2',ward:'piso1',libre:true},
+  {id:'107-1',cama:'107-1',ward:'uco',nombre:'SAMANIEGO, JUAN CARLOS RAMÓN',sexo:'♂',edad:78,ingreso:'06/04/26',diag:'Derrame pleural derecho',antec:'Ca de pulmón · HTA · Arritmia · ICC · Glaucoma',med:'Acenocumarol 1mg VO c/24hs (excepto lunes) · Neumocort Plus 2 puff c/12hs · Tiotropio 2 puff c/24hs · Rosuvastatina 10mg VO c/24hs · Domperidona/Simeticona 10/200mg VO c/24hs 09:00 · Bisoprolol 10mg VO c/24hs 08:00 · Lercanidipina 20mg VO c/24hs · Valsartán/Hidroclorotiazida 320/25mg VO c/24hs 08:00 · Sitagliptina 100mg VO c/24hs 10:00 · Latanoprost 0.005% 2 gotas c/24hs · Timolol 0.5%/Dorzolamida 2% 2 gotas c/24hs · Glimepirida 4mg VO c/24hs 10:00 · Budesonide 2 puff c/12hs',alergias:'No refiere',atb:'AMS 1.5g EV c/6hs · FI: 06/04/2026',pendientes:'TC de tórax · Lab ingreso',novedades:''},
+  {id:'107-2',cama:'107-2',ward:'uco',nombre:'CORREA, NÉSTOR RUBÉN',sexo:'♂',edad:76,ingreso:'30/03/26',diag:'Angina',antec:'IAM 2013 con 3 stents · IC FEY 33% · IC descompensada · FA anticoagulado · Shock mixto séptico-cardiogénico · EPOC',med:'AAS 100mg/día · Bisoprolol 2,5mg 08:00 · Valsartán 80mg 08:00 · Atorvastatina 40mg 08:00 · Dapagliflozina 10mg 08:00 · Espironolactona 25mg 08:00 · Rivaroxabán 15mg 08:00 · Budesonide 2 puffs c/8hs · Bromuro de ipratropio 2 puffs c/12hs',alergias:'No refiere',atb:'No',pendientes:'Realización CCG para el martes 07/04/26',novedades:''},
+  {id:'108-1',cama:'108-1',ward:'uco',nombre:'SPADAFORA, ELVIRA',sexo:'♀',edad:87,ingreso:'01/04/26',diag:'Insuficiencia respiratoria aguda',antec:'HTA · Cardiopatía · Angioplastia hace 9 años con stents',med:'Lorazepam 2.5mg VO noche 20:00 · Atorvastatina 20mg VO noche 20:00 · Espironolactona 25mg VO c/24hs · ASS 100mg VO c/24hs 08:00 · Losartán 50mg VO c/24hs 08:00',alergias:'No refiere',atb:'Levofloxacino 750mg EV c/24hs · FI: 01/04/2026',pendientes:'Lab control · Evaluar alta',novedades:''},
   {id:'108-2',cama:'108-2',ward:'uco',libre:true},
-  {id:'109-1',cama:'109-1',ward:'uco',nombre:'GRANERO, VICTORIA DEL VALLE',sexo:'♀',edad:75,ingreso:'23/03/26',diag:'Sepsis a foco pulmonar/urinario en falla renal aguda — Plan de diálisis diario',antec:'HTA · DBT tipo 2 · IR · Monorrenal · Apendicectomía · Colecistectomía · Hernioplastia con malla',med:'Enalapril 10mg VO c/24hs · Carvedilol 12,5mg VO c/24hs · ASS 100mg VO c/24hs · Insulina NPH 20UI mañanas · Pregabalina 75mg VO c/24hs',alergias:'No refiere',atb:'PTZ 4.5g EV c/12hs FI: 31/3/2026 · Claritromicina 500mg EV c/12hs FI: 23/03/2026',pendientes:'---',novedades:'---'},
-  {id:'109-2',cama:'109-2',ward:'uco',nombre:'ALOMO, CELIA',sexo:'♀',edad:80,ingreso:'30/03/26',diag:'Fx hueso frontal · Sangrado intraxial de origen contusivo · TEC sin pérdida de conciencia',antec:'Trastorno depresivo · Bypass cardíaco',med:'Desvenlafaxina 100mg VO c/24hs · Bisoprolol 5mg VO c/24hs · Rosuvastatina 10mg VO c/24hs · Clonazepam 2mg VO cada noche',alergias:'No refiere',atb:'---',pendientes:'---',novedades:'TAC cráneo 31/03: Sangrado intraparenquimatoso lóbulo occipital y frontal derecho discreto, línea media conservada'},
+  {id:'109-1',cama:'109-1',ward:'uco',nombre:'GRANERO, VICTORIA DEL VALLE',sexo:'♀',edad:75,ingreso:'23/03/26',diag:'Sepsis a foco pulmonar/urinario en falla renal aguda — Plan de diálisis diario',antec:'HTA · DBT tipo 2 · IR · Monorrenal · Apendicectomía · Colecistectomía · Hernioplastia con malla',med:'Enalapril 10mg VO c/24hs · Carvedilol 12,5mg VO c/24hs · ASS 100mg VO c/24hs · Insulina NPH 20UI mañanas · Pregabalina 75mg VO c/24hs',alergias:'No refiere',atb:'PTZ 4.5g EV c/12hs · FI: 31/3/2026 · Claritromicina 500mg EV c/12hs · FI: 23/03/2026',pendientes:'',novedades:''},
+  {id:'109-2',cama:'109-2',ward:'uco',nombre:'ALOMO, CELIA',sexo:'♀',edad:80,ingreso:'30/03/26',diag:'Fx hueso frontal · Sangrado intraxial de origen contusivo · TEC sin pérdida de conciencia',antec:'Trastorno depresivo · Bypass cardíaco',med:'Desvenlafaxina 100mg VO c/24hs · Bisoprolol 5mg VO c/24hs · Rosuvastatina 10mg VO c/24hs · Clonazepam 2mg VO cada noche',alergias:'No refiere',atb:'',pendientes:'',novedades:'TAC cráneo 31/03: Sangrado intraparenquimatoso lóbulo occipital y frontal derecho discreto, línea media conservada'},
   {id:'110-1',cama:'110-1',ward:'uco',nombre:'TORREZ, JUANA ELVIRA',sexo:'♀',edad:79,ingreso:'30/03/26',diag:'ERC reagudizada FG 4 ml/min · TEC sin pérdida · Hiponatremia grave',antec:'HTA · ERC en diálisis trisemanal (Lun-Mié-Vie) · Colecistectomía',med:'Pregabalina 50mg VO c/24hs (19:00) · Quetiapina 25mg VO c/24hs (23:00)',alergias:'No refiere',atb:'No',pendientes:'TAC encéfalo PD · Rx columna cervical PD · Rx MMSS izq PD',novedades:'02/04: Hemotransfusión 1 UND GR'},
-  {id:'110-2',cama:'110-2',ward:'uco',nombre:'LÓPEZ, ELBA LETICIA',sexo:'♀',edad:75,ingreso:'26/03/26',diag:'Trastorno de la coagulación por anticoagulantes · ICC descompensada FEY 20%',antec:'HTA · Arritmia cardíaca · Hipotiroidismo · Anticoagulada · ICC',med:'Bisoprolol 5mg VO 08:00 / 2,5mg VO post cena · Dapagliflozina 10mg post desayuno · Espironolactona 25mg VO c/día · Levotiroxina 100mcg ayunas · Acenocumarol 1mg Lun a Sáb',alergias:'No refiere',atb:'---',pendientes:'---',novedades:'27/03: Transfusión 2 UND PFC'},
-  // OBSERVACIÓN
+  {id:'110-2',cama:'110-2',ward:'uco',nombre:'LÓPEZ, ELBA LETICIA',sexo:'♀',edad:75,ingreso:'26/03/26',diag:'Trastorno de la coagulación por anticoagulantes · ICC descompensada FEY 20%',antec:'HTA · Arritmia cardíaca · Hipotiroidismo · Anticoagulada · ICC',med:'Bisoprolol 5mg VO 08:00 / 2,5mg VO post cena · Dapagliflozina 10mg post desayuno · Espironolactona 25mg VO c/día · Levotiroxina 100mcg ayunas · Acenocumarol 1mg Lun a Sáb',alergias:'No refiere',atb:'',pendientes:'',novedades:'27/03: Transfusión 2 UND PFC'},
   {id:'GEN/01',cama:'GENERAL/01',ward:'obs',libre:true},
-  {id:'GEN/02',cama:'GENERAL/02',ward:'obs',nombre:'MANSILLA, MARÍA INÉS',sexo:'♀',edad:81,ingreso:'06/03/26',diag:'Deshidratación severa superada · Negativismo a la ingesta · Trastorno de la deglución · ITU tratada',antec:'Demencia · HTA',med:'Quetiapina 50mg VO c/8hs · Sertralina 50mg VO c/8hs · Risperidona 4 gotas c/8hs · Clonazepam 0.5mg VO noche · Enalapril/Hidroclorotiazida 10/12.5mg VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'---'},
-  {id:'GEN/03',cama:'GENERAL/03',ward:'obs',nombre:'DE GIGLIO, MARGARITA',sexo:'♀',edad:87,ingreso:'02/03/26',diag:'SDRA · Derrame pleural bilateral en resolución · ICC compensada · Hipokalemia severa tratada · Caso social · KPC positivo',antec:'Anemia severa · EPOC · HTA · Cirugía de cadera',med:'Atorvastatina 20mg VO c/día 08:00 · Mosapride 5mg c/día VO · Valsartán 160mg VO c/12hs · Amlodipino 10mg c/día VO · Carvedilol 12.5mg c/12hs VO · Hidroclorotiazida 12,5mg VO/día',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'---'},
+  {id:'GEN/02',cama:'GENERAL/02',ward:'obs',nombre:'MANSILLA, MARÍA INÉS',sexo:'♀',edad:81,ingreso:'06/03/26',diag:'Deshidratación severa superada · Negativismo a la ingesta · Trastorno de la deglución · ITU tratada',antec:'Demencia · HTA',med:'Quetiapina 50mg VO c/8hs · Sertralina 50mg VO c/8hs · Risperidona 4 gotas c/8hs · Clonazepam 0.5mg VO noche · Enalapril/Hidroclorotiazida 10/12.5mg VO c/24hs',alergias:'No refiere',atb:'No',pendientes:'',novedades:''},
+  {id:'GEN/03',cama:'GENERAL/03',ward:'obs',nombre:'DE GIGLIO, MARGARITA',sexo:'♀',edad:87,ingreso:'02/03/26',diag:'SDRA · Derrame pleural bilateral en resolución · ICC compensada · Hipokalemia severa tratada · Caso social · KPC positivo',antec:'Anemia severa · EPOC · HTA · Cirugía de cadera',med:'Atorvastatina 20mg VO c/día 08:00 · Mosapride 5mg c/día VO · Valsartán 160mg VO c/12hs · Amlodipino 10mg c/día VO · Carvedilol 12.5mg c/12hs VO · Hidroclorotiazida 12,5mg VO/día',alergias:'No refiere',atb:'No',pendientes:'',novedades:''},
   {id:'GEN/04',cama:'GENERAL/04',ward:'obs',libre:true},
-  // PLANTA BAJA
   {id:'101-1',cama:'101-1',ward:'pb',libre:true},
-  {id:'101-2',cama:'101-2',ward:'pb',nombre:'GONZÁLEZ, BEATRIZ ROSARIO',sexo:'♀',edad:86,ingreso:'02/04/26',diag:'Contusión de cadera — a descartar fractura cadera izquierda',antec:'Apendicectomía · Tumorectomía por fibroma',med:'Sertralina 50mg VO post desayuno · Alprazolam 0,5mg VO 17:00 · Zopiclona 10mg VO 20:30',alergias:'No refiere',atb:'No',pendientes:'Rx de cadera · IC con Traumatología',novedades:'---'},
-  {id:'102-1',cama:'102-1',ward:'pb',nombre:'FERREIRA, SUSANA CLARA',sexo:'♀',edad:78,ingreso:'03/01/26',diag:'Caso social · En espera de tercer nivel (geriátrico)',antec:'HTA · EPOC con O2 domiciliario · ACV con secuelas · Postrada desde hace 1 año · Demencia tipo Alzheimer · Colecistectomía · Cesárea (1)',med:'Frevia 2 puff c/12hs INH · Salbutamol 2 puff c/12hs 20:00 · Amlodipino 10mg c/24hs 20:00 · Quetiapina 25mg c/24hs noche VO · Zolpidem 12,5mg c/24hs noche VO · Alprazolam 1mg c/24hs 21:00 VO · Metformina 500mg VO cena · Nivax Plus 1 tab c/12hs · Montelukast 10mg VO noche',alergias:'No refiere',atb:'No',pendientes:'IC con Psiquiatría',novedades:'---'},
-  {id:'102-2',cama:'102-2',ward:'pb',nombre:'GONZÁLEZ, MARTA CAROLINA',sexo:'♀',edad:87,ingreso:'01/04/26',diag:'Síncope en estudio',antec:'HTA',med:'Enalapril 10mg VO c/día post desayuno · Atenolol 50mg VO c/día post desayuno',alergias:'No refiere',atb:'---',pendientes:'Lab de control · Ecocardiograma · Eco Doppler cuello y MMII',novedades:'---'},
-  {id:'103-1',cama:'103-1',ward:'pb',nombre:'SANTA CRUZ, GINÉS',sexo:'♂',edad:72,ingreso:'01/04/26',diag:'ITU resistente',antec:'FA con ACO · Recambio valvular mitral + bypass (hace 1 año) · HTA · ACV isquémico secuelado hemiplejia derecha (sep/2025) · Marcapasos por enfermedad del nodo sinusal',med:'Bisoprolol 2.5mg VO c/24hs 08:00 SNG · Losartán 25mg VO c/24hs 08:00 SNG · Atorvastatina 40mg VO noche 20:00 SNG · Rivaroxabán 15mg VO c/24hs 09:00 SNG · Aspirina 100mg VO c/24hs 10:00 SNG · Alimentación por K108 a 84ml/h',alergias:'No refiere',atb:'AMS 1.5g EV c/6hs · FI: 01/04/2026',pendientes:'---',novedades:'Urocultivo: Streptococcus agalactiae resistente a Ciprofloxacina · Sensible a Ampicilina, Nitrofurantoína y Cefotaxina'},
-  {id:'103-2',cama:'103-2',ward:'pb',nombre:'JALOS, JOSÉ',sexo:'♂',edad:76,ingreso:'04/04/26',diag:'Fractura de cadera izquierda',antec:'DM insulinorrequiriente · HPB',med:'Metformina 1g almuerzo y cena · Insulina NPH 24UI desayuno / 20UI almuerzo / 4UI noche · Tamsulosina 0.4mg/día',alergias:'No refiere',atb:'No',pendientes:'Rx de cadera · IC con Traumatología para definir conducta',novedades:'---'},
-  {id:'104',cama:'104',ward:'pb',nombre:'ZÁRATE, MARTA BEATRIZ',sexo:'♀',edad:72,ingreso:'18/03/26',diag:'Retiro material osteosíntesis + espaciador funcional + toma de muestras por pseudoartrosis cadera izquierda · Hipokalemia moderada · ITU · Luxación de cadera',antec:'---',med:'---',alergias:'No refiere',atb:'Piptaz 4.5g EV c/6h FI: 19/03 · Ciprofloxacina 400mg EV c/8h FI: 01/04/26',pendientes:'---',novedades:'18/03: POP inmediato — retiro material osteosíntesis + espaciador funcional + muestras pseudoartrosis cadera izq.\n31/03: Transfusión 1 UND GR'},
-  {id:'105',cama:'105',ward:'pb',nombre:'ALARCÓN, NATALIO',sexo:'♂',edad:69,ingreso:'02/04/26',diag:'Insuficiencia renal crónica · Hiponatremia severa',antec:'Deshidratación · IRC · Hiponatremia · Cirrosis hepática',med:'Ácido ursodeoxicólico VO c/24hs · Rifaximina 550mg VO c/24hs · Lactulosa 10ml c/24hs · Omeprazol 40mg VO c/24hs · Alprazolam 2mg VO PM',alergias:'No refiere',atb:'No',pendientes:'---',novedades:'---'},
+  {id:'101-2',cama:'101-2',ward:'pb',nombre:'GONZÁLEZ, BEATRIZ ROSARIO',sexo:'♀',edad:86,ingreso:'02/04/26',diag:'Contusión de cadera — a descartar fractura cadera izquierda',antec:'Apendicectomía · Tumorectomía por fibroma',med:'Sertralina 50mg VO post desayuno · Alprazolam 0,5mg VO 17:00 · Zopiclona 10mg VO 20:30',alergias:'No refiere',atb:'No',pendientes:'Rx de cadera · IC con Traumatología',novedades:''},
+  {id:'102-1',cama:'102-1',ward:'pb',nombre:'FERREIRA, SUSANA CLARA',sexo:'♀',edad:78,ingreso:'03/01/26',diag:'Caso social · En espera de tercer nivel (geriátrico)',antec:'HTA · EPOC con O2 domiciliario · ACV con secuelas · Postrada desde hace 1 año · Demencia tipo Alzheimer · Colecistectomía · Cesárea (1)',med:'Frevia 2 puff c/12hs INH · Salbutamol 2 puff c/12hs 20:00 · Amlodipino 10mg c/24hs 20:00 · Quetiapina 25mg c/24hs noche VO · Zolpidem 12,5mg c/24hs noche VO · Alprazolam 1mg c/24hs 21:00 VO · Metformina 500mg VO cena · Nivax Plus 1 tab c/12hs · Montelukast 10mg VO noche',alergias:'No refiere',atb:'No',pendientes:'IC con Psiquiatría',novedades:''},
+  {id:'102-2',cama:'102-2',ward:'pb',libre:true},
+  {id:'103-1',cama:'103-1',ward:'pb',nombre:'SANTA CRUZ, GINÉS',sexo:'♂',edad:72,ingreso:'01/04/26',diag:'ITU resistente',antec:'FA con ACO · Recambio valvular mitral + bypass (hace 1 año) · HTA · ACV isquémico secuelado hemiplejía derecha (sep/2025) · Marcapasos por enfermedad del nodo sinusal',med:'Bisoprolol 2.5mg VO c/24hs 08:00 SNG · Losartán 25mg VO c/24hs 08:00 SNG · Atorvastatina 40mg VO noche 20:00 SNG · Rivaroxabán 15mg VO c/24hs 09:00 SNG · Aspirina 100mg VO c/24hs 10:00 SNG · Alimentación por K108 a 84ml/h',alergias:'No refiere',atb:'AMS 1.5g EV c/6hs · FI: 01/04/2026',pendientes:'',novedades:'Urocultivo: Streptococcus agalactiae resistente a Ciprofloxacina · Sensible a Ampicilina, Nitrofurantoína y Cefotaxina'},
+  {id:'103-2',cama:'103-2',ward:'pb',nombre:'JALOS, JOSÉ',sexo:'♂',edad:76,ingreso:'04/04/26',diag:'Fractura de cadera izquierda',antec:'DM insulinorrequiriente · HPB',med:'Metformina 1g almuerzo y cena · Insulina NPH 24UI desayuno / 20UI almuerzo / 4UI noche · Tamsulosina 0.4mg/día',alergias:'No refiere',atb:'No',pendientes:'Rx de cadera · IC con Traumatología para definir conducta',novedades:''},
+  {id:'104',cama:'104',ward:'pb',nombre:'ZÁRATE, MARTA BEATRIZ',sexo:'♀',edad:72,ingreso:'18/03/26',diag:'Retiro material osteosíntesis + espaciador funcional + toma de muestras por pseudoartrosis cadera izquierda · Hipokalemia moderada · ITU · Luxación de cadera',antec:'',med:'',alergias:'No refiere',atb:'Piptaz 4.5g EV c/6h · FI: 19/03 · Ciprofloxacina 400mg EV c/8h · FI: 01/04/26',pendientes:'',novedades:'18/03: POP inmediato — retiro material osteosíntesis + espaciador funcional + muestras pseudoartrosis cadera izq.\n31/03: Transfusión 1 UND GR'},
+  {id:'105',cama:'105',ward:'pb',nombre:'ALARCÓN, NATALIO',sexo:'♂',edad:69,ingreso:'02/04/26',diag:'Insuficiencia renal crónica · Hiponatremia severa',antec:'Deshidratación · IRC · Hiponatremia · Cirrosis hepática',med:'Ácido ursodeoxicólico VO c/24hs · Rifaximina 550mg VO c/24hs · Lactulosa 10ml c/24hs · Omeprazol 40mg VO c/24hs · Alprazolam 2mg VO PM',alergias:'No refiere',atb:'No',pendientes:'',novedades:''}
 ];
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
@@ -2166,7 +2167,123 @@ function confirmAction() {
   closeConfirm();
 }
 
-// ── LOG DEL DÍA ───────────────────────────────────────────────────────────────
+// ── EXPORT PDF (estilo pase de clínica) ───────────────────────────
+function exportarPDF() {
+  var today = new Date().toLocaleDateString('es-AR', {
+    weekday:'long', day:'numeric', month:'long', year:'numeric'
+  });
+  var todayShort = new Date().toLocaleDateString('es-AR');
+
+  // Agrupar camas por servicio
+  var wards = [
+    { id:'piso1', label:'SERVICIO 1° PISO' },
+    { id:'uco',   label:'SERVICIO UCO' },
+    { id:'obs',   label:'SERVICIO OBSERVACIÓN — 1° PISO' },
+    { id:'pb',    label:'SERVICIO PLANTA BAJA' },
+  ];
+
+  // Índice
+  var indexRows = '';
+  wards.forEach(function(w) {
+    var beds = patients.filter(function(p){ return p.ward === w.id; });
+    if (!beds.length) return;
+    indexRows += '<tr><td colspan="2" class="ward-header">' + w.label + '</td></tr>';
+    beds.forEach(function(p) {
+      if (p.libre) {
+        indexRows += '<tr><td class="index-cama">Cama ' + p.cama + '</td><td class="index-name libre">— LIBRE —</td></tr>';
+      } else {
+        indexRows += '<tr><td class="index-cama">Cama ' + p.cama + '</td><td class="index-name">' + p.nombre + ' (' + p.sexo + ' ' + p.edad + ' años)</td></tr>';
+      }
+    });
+  });
+
+  // Fichas de pacientes
+  var fichas = '';
+  wards.forEach(function(w) {
+    var beds = patients.filter(function(p){ return p.ward === w.id; });
+    if (!beds.length) return;
+    fichas += '<div class="ward-section"><h2>' + w.label + '</h2></div>';
+    beds.forEach(function(p) {
+      var hasAtb = p.atb && p.atb !== 'No' && p.atb !== '---' && p.atb !== '';
+      var hasAlrg = p.alergias && p.alergias !== 'No refiere' && p.alergias !== 'No registrada';
+      var novedLines = p.novedades ? p.novedades.split('\n').filter(function(l){ return l && l !== '---'; }) : [];
+
+      fichas += '<div class="patient-block">';
+      fichas += '<table class="patient-table">';
+      // Header row
+      fichas += '<tr class="header-row">';
+      fichas += '<td class="cell-label">CAMA ' + p.cama + '</td>';
+      if (p.libre) {
+        fichas += '<td class="cell-value libre-cell">— LIBRE —</td>';
+      } else {
+        fichas += '<td class="cell-value name-cell">' + p.nombre + ' ' + p.sexo + ' ' + p.edad + ' años &nbsp;·&nbsp; Ingreso: ' + p.ingreso + '</td>';
+      }
+      fichas += '</tr>';
+
+      if (!p.libre) {
+        fichas += '<tr><td class="cell-label">DIAGNÓSTICO</td><td class="cell-value">' + (p.diag||'—') + '</td></tr>';
+        fichas += '<tr><td class="cell-label">Antecedentes</td><td class="cell-value">' + (p.antec||'—') + '</td></tr>';
+        fichas += '<tr><td class="cell-label">Medicación habitual</td><td class="cell-value">' + (p.med||'—') + '</td></tr>';
+        fichas += '<tr><td class="cell-label' + (hasAlrg?' alergia-label':'') + '">Alergias</td><td class="cell-value' + (hasAlrg?' alergia-val':'') + '">' + (p.alergias||'No refiere') + '</td></tr>';
+        fichas += '<tr><td class="cell-label' + (hasAtb?' atb-label':'') + '">Antibióticos</td><td class="cell-value' + (hasAtb?' atb-val':'') + '">' + (p.atb||'No') + '</td></tr>';
+        fichas += '<tr><td class="cell-label">Pendientes</td><td class="cell-value">' + (p.pendientes && p.pendientes !== '---' ? p.pendientes : '—') + '</td></tr>';
+        fichas += '<tr><td class="cell-label">Novedades</td><td class="cell-value">' + (novedLines.length ? novedLines.join('<br>') : '—') + '</td></tr>';
+      }
+
+      fichas += '</table></div>';
+    });
+  });
+
+  var html = '<!DOCTYPE html><html lang="es"><head>' +
+    '<meta charset="UTF-8">' +
+    '<title>Pase de Clinica — ' + todayShort + '</title>' +
+    '<style>' +
+    '@page { size: A4; margin: 18mm 16mm; }' +
+    '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+    'body { font-family: Arial, sans-serif; font-size: 10px; color: #111; }' +
+    'h1.doc-title { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }' +
+    'h1.doc-date  { font-size: 12px; font-weight: normal; text-align: center; margin-bottom: 20px; color: #444; }' +
+    'h2.index-title { font-size: 12px; font-weight: bold; margin: 16px 0 6px; border-bottom: 1.5px solid #1a4a8a; padding-bottom: 3px; color: #1a4a8a; }' +
+    /* Index table */
+    '.index-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }' +
+    '.index-table .ward-header { font-weight: bold; font-size: 10px; padding: 5px 6px; background: #1a4a8a; color: #fff; text-transform: uppercase; letter-spacing: .04em; }' +
+    '.index-table .index-cama { width: 120px; padding: 3px 6px; border-bottom: 0.5px solid #ddd; font-weight: bold; }' +
+    '.index-table .index-name { padding: 3px 6px; border-bottom: 0.5px solid #ddd; }' +
+    '.index-table .libre { color: #888; font-style: italic; }' +
+    /* Ward section */
+    '.ward-section h2 { font-size: 12px; font-weight: bold; padding: 6px 8px; background: #1a4a8a; color: #fff; text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 0; page-break-after: avoid; }' +
+    /* Patient block */
+    '.patient-block { margin-bottom: 6px; page-break-inside: avoid; }' +
+    '.patient-table { width: 100%; border-collapse: collapse; border: 1px solid #bbb; }' +
+    '.patient-table td { padding: 3px 7px; border: 0.5px solid #ccc; vertical-align: top; font-size: 9.5px; line-height: 1.4; }' +
+    '.cell-label { width: 130px; font-weight: bold; background: #f0f0f0; color: #333; white-space: nowrap; }' +
+    '.cell-value { color: #111; }' +
+    '.header-row .cell-label { background: #1a4a8a; color: #fff; font-size: 10px; }' +
+    '.header-row .cell-value { background: #e8eef7; font-weight: bold; font-size: 10px; }' +
+    '.name-cell { font-weight: bold; }' +
+    '.libre-cell { color: #888; font-style: italic; }' +
+    '.alergia-label, .alergia-val { color: #9b0000; font-weight: bold; }' +
+    '.atb-label { }  .atb-val { color: #1a4a8a; }' +
+    '.footer { margin-top: 20px; font-size: 9px; color: #888; text-align: right; border-top: 0.5px solid #ddd; padding-top: 6px; }' +
+    '@media print { .no-print { display:none; } }' +
+    '</style></head><body>' +
+    '<div class="no-print" style="background:#1a4a8a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
+    '<span style="font-weight:bold">Pase de Clínica — ' + todayShort + '</span>' +
+    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">Imprimir / Guardar PDF</button>' +
+    '</div>' +
+    '<h1 class="doc-title">PASE DE CLÍNICA</h1>' +
+    '<h1 class="doc-date">' + today + '</h1>' +
+    '<h2 class="index-title">ÍNDICE DE PACIENTES</h2>' +
+    '<table class="index-table">' + indexRows + '</table>' +
+    fichas +
+    '<div class="footer">Generado el ' + new Date().toLocaleString('es-AR') + ' · Sistema Pase de Clínica</div>' +
+    '</body></html>';
+
+  var win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { showToast('Permitir popups para exportar PDF'); return; }
+  win.document.write(html);
+  win.document.close();
+}────────────
 const FIELD_LABELS = {
   diag:'Diagnóstico', antec:'Antecedentes', med:'Medicación',
   alergias:'Alergias', atb:'Antibióticos', pendientes:'Pendientes',
