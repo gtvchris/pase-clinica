@@ -2924,35 +2924,66 @@ function applyRemote(data) {
 // ── Load initial state from Supabase ────────────────────────────
 function loadFromSupabase() {
   setStatus('#e8c97a', 'cargando…', true);
+
+  // Timeout de 8 segundos — si Supabase no responde, cargamos igual con datos locales
+  var done = false;
+  var timeout = setTimeout(function() {
+    if (done) return;
+    done = true;
+    console.warn('[Supabase] Timeout — cargando con datos locales');
+    setStatus('#e87a7a', 'sin conexión');
+    _showLoginReady();
+  }, 8000);
+
   sb.from('clinica_state')
     .select('data')
     .eq('id', 'main')
     .single()
     .then(function(res) {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+
       if (res.error) {
         if (res.error.code === 'PGRST116') {
-          // No row yet — push local state (first run)
+          // Tabla vacía — primera vez, subimos los datos del DOCX
           setStatus('#e8c97a', 'primera vez…', true);
-          setTimeout(function(){
-            pushToSupabase();
-            setStatus('#5cbb7a', 'base creada');
-            subscribeRealtime();
-          }, 800);
+          pushToSupabase();
+          setStatus('#5cbb7a', 'datos iniciales subidos');
+          subscribeRealtime();
         } else {
-          console.error('[Supabase] Error cargando:', res.error.message);
-          setStatus('#e87a7a', 'error conexión');
+          console.error('[Supabase] Error:', res.error.message);
+          setStatus('#e87a7a', 'sin conexión');
         }
+        _showLoginReady();
         return;
       }
+
       if (res.data && res.data.data && res.data.data.patients) {
         applyRemote(res.data.data);
         setStatus('#5cbb7a', 'sincronizado');
       } else {
-        // Row exists but empty — push our data
         pushToSupabase();
       }
       subscribeRealtime();
+      _showLoginReady();
+    })
+    .catch(function(e) {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      console.error('[Supabase] Exception:', e);
+      setStatus('#e87a7a', 'sin conexión');
+      _showLoginReady();
     });
+}
+
+// Muestra la pantalla de login una vez que los datos están listos
+function _showLoginReady() {
+  populateLoginSelect();
+  refreshUserSelect();
+  renderList();
+  updateStats();
 }
 
 // ── Realtime subscription ────────────────────────────────────────
