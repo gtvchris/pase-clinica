@@ -917,7 +917,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
       <select id="user-select" onchange="requestLogin()" style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); font-family:var(--sans); cursor:pointer; color:var(--text);">
         <option value="">— Seleccionar —</option>
       </select>
-      <button onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;">⚙ Administrar usuarios</button>
+      <button id="sidebar-usuarios-btn" onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;display:none;">⚙ Administrar usuarios</button>
+      <button id="sidebar-micuenta-btn" onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;display:none;">👤 Mi cuenta</button>
     </div>
   </div>
 
@@ -1099,9 +1100,9 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <span>PDF</span>
   </button>
   <!-- Usuarios -->
-  <button class="bb-btn" onclick="showUsuarios()">
+  <button class="bb-btn" id="bb-usuarios-btn" onclick="showUsuarios()">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M21 20c0-2-1.8-3.5-4-3.5"/></svg>
-    <span>Usuarios</span>
+    <span id="bb-usuarios-label">Cuenta</span>
   </button>
 </div>
 
@@ -1667,13 +1668,10 @@ function _afterUsersLoaded() {
 }
 
 // ── USUARIOS ──────────────────────────────────────────────────────────────────
+// Usuarios se cargan desde Supabase — esta lista es solo un fallback temporal
+// y se reemplaza completamente cuando llegan los datos de la nube
 let usuarios = [
-  { id: 'u1', nombre: 'Dr. García',       rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
-  { id: 'u2', nombre: 'Dra. Rodríguez',   rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
-  { id: 'u3', nombre: 'Dr. Pérez',        rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
-  { id: 'u4', nombre: 'Enf. López',       rol: 'enfermeria', pass: '1234', activo: true,  creado: '07/04/2026' },
-  { id: 'u5', nombre: 'Enf. Martínez',    rol: 'enfermeria', pass: '1234', activo: true,  creado: '07/04/2026' },
-  { id: 'u6', nombre: 'Administrador',    rol: 'admin',      pass: 'admin', activo: true, creado: '07/04/2026' },
+  { id: 'u6', nombre: 'Administrador', rol: 'admin', pass: 'admin', activo: true, creado: '07/04/2026' },
 ];
 let editingUserId = null;
 
@@ -1807,6 +1805,12 @@ function _applyLogin(u) {
   document.getElementById('user-initials').textContent      = initials;
   document.getElementById('user-name-display').textContent  = u.nombre;
   document.getElementById('logout-btn').style.display       = 'inline-block';
+
+  // Show role-appropriate sidebar button
+  var isAdmin = u.rol === 'admin';
+  document.getElementById('sidebar-usuarios-btn').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('sidebar-micuenta-btn').style.display = isAdmin ? 'none' : 'block';
+
   // Sync both selects
   document.getElementById('user-select').value = u.id;
   var mSel = document.getElementById('user-select-mobile');
@@ -1828,6 +1832,8 @@ function applyLogout() {
   document.getElementById('user-initials').textContent     = '—';
   document.getElementById('user-name-display').textContent = 'Sin sesión';
   document.getElementById('logout-btn').style.display      = 'none';
+  document.getElementById('sidebar-usuarios-btn').style.display = 'none';
+  document.getElementById('sidebar-micuenta-btn').style.display = 'none';
   document.getElementById('user-select').value = '';
   var mSel = document.getElementById('user-select-mobile');
   if (mSel) mSel.value = '';
@@ -2547,7 +2553,8 @@ function exportarPDF() {
     '</style></head><body>' +
     '<div class="no-print" style="background:#1a4a8a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
     '<span style="font-weight:bold">Pase de Clínica — ' + todayShort + '</span>' +
-    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">Imprimir / Guardar PDF</button>' +
+    '<button onclick="window.close()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">✕ Cerrar</button>' +
+    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">🖨 Imprimir / PDF</button>' +
     '</div>' +
     '<h1 class="doc-title">PASE DE CLÍNICA</h1>' +
     '<h1 class="doc-date">' + today + '</h1>' +
