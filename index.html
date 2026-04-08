@@ -862,7 +862,9 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     </button>
     <div class="header-actions-desktop">
       <button class="log-btn" onclick="showNuevoPaciente()">+ Nuevo</button>
-      <button class="log-btn" onclick="showLog()">Log del día</button>
+      <button class="log-btn" onclick="showDocxImport()">↑ DOCX</button>
+      <button class="log-btn" onclick="showVersiones()">🕐 Versiones</button>
+      <button class="log-btn" onclick="showLog()">Log</button>
       <button class="log-btn" onclick="exportarPDF()">PDF</button>
     </div>
   </div>
@@ -1135,6 +1137,78 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <div class="mobile-filter-chip" onclick="setFilterMobile('sinvisita',this)">Sin visita hoy</div>
   </div>
   <button onclick="closeAllSheets()" style="width:100%;margin-top:14px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Aplicar</button>
+</div>
+
+<!-- IMPORTAR DOCX MODAL -->
+<div class="modal-overlay" id="docx-modal" onclick="closeDocxOutside(event)">
+  <div class="modal" style="width:700px;max-width:97vw;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <span class="modal-title">Importar DOCX de pase</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Revisá los cambios antes de aplicar — los datos actuales NO se pierden</div>
+      </div>
+      <button class="modal-close" onclick="closeDocx()">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+      <!-- Step 1: upload -->
+      <div id="docx-step-upload">
+        <div style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;" id="docx-drop-zone" onclick="document.getElementById('docx-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleDocxDrop(event)">
+          <div style="font-size:32px;margin-bottom:8px;">📄</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px;">Arrastrá el DOCX acá o tocá para elegir</div>
+          <div style="font-size:12px;color:var(--muted);">Archivo .docx del pase de clínica</div>
+          <input id="docx-file-input" type="file" accept=".docx" style="display:none" onchange="handleDocxFile(event)">
+        </div>
+        <div id="docx-parsing-status" style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px;"></div>
+      </div>
+
+      <!-- Step 2: preview diff -->
+      <div id="docx-step-preview" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:600;" id="docx-summary"></div>
+          <button onclick="resetDocxImport()" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;">← Elegir otro archivo</button>
+        </div>
+
+        <!-- Legend -->
+        <div style="display:flex;gap:16px;margin-bottom:12px;font-size:12px;">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#d4edda;display:inline-block;"></span>Nuevo / cambió</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#fff3cd;display:inline-block;"></span>Sin cambios</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#f8d7da;display:inline-block;"></span>Se libera</span>
+        </div>
+
+        <div id="docx-diff-container" style="display:flex;flex-direction:column;gap:4px;max-height:380px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div id="docx-footer" style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;display:none;">
+      <button class="confirm-cancel" onclick="closeDocx()">Cancelar</button>
+      <button id="docx-apply-btn" onclick="applyDocxImport()" style="background:var(--ok);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+        ✓ Aplicar cambios
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- VERSIONES MODAL -->
+<div class="modal-overlay" id="versiones-modal" onclick="closeVersionesOutside(event)">
+  <div class="modal" style="width:580px;max-width:97vw;max-height:88vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <span class="modal-title">Historial de versiones</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Últimos 7 días · Podés restaurar cualquier snapshot</div>
+      </div>
+      <button class="modal-close" onclick="closeVersiones()">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0;">
+      <div id="versiones-list" style="padding:16px 20px;display:flex;flex-direction:column;gap:8px;">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Cargando versiones…</div>
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--surface2);">
+      <button onclick="crearSnapshotManual()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+        📸 Guardar versión ahora
+      </button>
+      <span style="font-size:11px;color:var(--muted);">Los snapshots automáticos se crean cada 23hs</span>
+    </div>
+  </div>
 </div>
 
 <!-- NUEVO PACIENTE MODAL -->
@@ -2977,6 +3051,451 @@ function confirmarNuevoPaciente() {
   if (typeof window._syncPush === 'function') window._syncPush();
 }
 
+// ── IMPORTAR DOCX ─────────────────────────────────────────────────────────────
+var _docxParsed = null; // parsed patients from DOCX, pending confirmation
+
+function showDocxImport() {
+  if (!currentUser) { showToast('Seleccioná un usuario primero'); return; }
+  const me = usuarios.find(u => u.id === currentUserId);
+  if (!me || me.rol !== 'admin') { showToast('Solo el administrador puede importar DOCX'); return; }
+  resetDocxImport();
+  document.getElementById('docx-modal').classList.add('open');
+}
+
+function closeDocx() { document.getElementById('docx-modal').classList.remove('open'); }
+function closeDocxOutside(e) { if (e.target === document.getElementById('docx-modal')) closeDocx(); }
+
+function resetDocxImport() {
+  _docxParsed = null;
+  document.getElementById('docx-step-upload').style.display = '';
+  document.getElementById('docx-step-preview').style.display = 'none';
+  document.getElementById('docx-footer').style.display = 'none';
+  document.getElementById('docx-parsing-status').textContent = '';
+  document.getElementById('docx-file-input').value = '';
+}
+
+function handleDocxDrop(e) {
+  e.preventDefault();
+  document.getElementById('docx-drop-zone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) processDocxFile(file);
+}
+
+function handleDocxFile(e) {
+  const file = e.target.files[0];
+  if (file) processDocxFile(file);
+}
+
+function processDocxFile(file) {
+  if (!file.name.endsWith('.docx')) {
+    document.getElementById('docx-parsing-status').textContent = 'Error: el archivo debe ser .docx';
+    return;
+  }
+  document.getElementById('docx-parsing-status').textContent = 'Leyendo archivo…';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const arrayBuffer = e.target.result;
+    // Use mammoth to extract text from DOCX
+    mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+      .then(function(result) {
+        document.getElementById('docx-parsing-status').textContent = 'Interpretando datos…';
+        const parsed = parseDocxText(result.value);
+        if (!parsed || parsed.length === 0) {
+          document.getElementById('docx-parsing-status').textContent = 'No se pudo interpretar el archivo. ¿Es el formato correcto?';
+          return;
+        }
+        _docxParsed = parsed;
+        showDocxDiff(parsed);
+      })
+      .catch(function(err) {
+        document.getElementById('docx-parsing-status').textContent = 'Error al leer el DOCX: ' + err.message;
+      });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Parser del DOCX ──────────────────────────────────────────────────────────
+function parseDocxText(text) {
+  const parsed = [];
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+  // Detectar servicio actual
+  var currentWard = 'piso1';
+  var WARD_MAP = {
+    'SERVICIO 1 PISO': 'piso1', 'SERVICIO 1° PISO': 'piso1', 'PRIMER PISO': 'piso1',
+    'SERVICIO UCO': 'uco', 'UCO': 'uco',
+    'SERVICIO OBSERVACION': 'obs', 'OBSERVACION': 'obs', 'OBSERVACIÓN': 'obs',
+    'SERVICIO PLANTA BAJA': 'pb', 'PLANTA BAJA': 'pb',
+  };
+
+  var current = null;
+  var fieldMode = null;
+  // Regex para detectar inicio de cama: "201-1 APELLIDO, NOMBRE" o "107-1"
+  var bedRe = /^(\d{3}-\d|GENERAL\/\d{2}|\d{3})\s*(.*)/;
+
+  var fieldPatterns = [
+    { re: /^DX\s*[:.]?\s*(.*)/i,         field: 'diag'      },
+    { re: /^APP\s*[:.]?\s*(.*)/i,         field: 'antec'     },
+    { re: /^MH\s*[:.]?\s*(.*)/i,          field: 'med'       },
+    { re: /^ALERGIAS?\s*[:.]?\s*(.*)/i,   field: 'alergias'  },
+    { re: /^ATB\s*[:.]?\s*(.*)/i,         field: 'atb'       },
+    { re: /^PENDIENTES?\s*[:.]?\s*(.*)/i, field: 'pendientes'},
+    { re: /^NOVEDADES?\s*[:.]?\s*(.*)/i,  field: 'novedades' },
+  ];
+
+  // Detectar sexo/edad/FI en líneas como "F, 45 AÑOS" o "M, 76 AÑOS"
+  var metaRe = /^([FM])\s*[,\s]\s*(\d+)?\s*A[ÑN]OS?/i;
+  var fiRe   = /FI\s*[:\-]?\s*([\d\/]+)/i;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var lineUp = line.toUpperCase();
+
+    // Detectar cambio de servicio
+    var wardFound = null;
+    Object.keys(WARD_MAP).forEach(function(k) {
+      if (lineUp.includes(k)) wardFound = WARD_MAP[k];
+    });
+    if (wardFound) { currentWard = wardFound; current = null; fieldMode = null; continue; }
+
+    // Detectar inicio de cama
+    var bedMatch = bedRe.exec(line);
+    if (bedMatch) {
+      var camaId = bedMatch[1];
+      var rest   = bedMatch[2].trim();
+
+      // Guardar paciente anterior
+      if (current) { parsed.push(current); }
+
+      // Determinar si es cama vacía (sin nombre en el resto de la línea)
+      var nombre  = '';
+      var sexo    = '♀';
+      var edad    = null;
+      var ingreso = '';
+
+      // El nombre suele estar en el mismo renglón
+      if (rest && rest.length > 2 && !/^[FM]\s*[,\s]/.test(rest)) {
+        nombre = rest.toUpperCase();
+      }
+
+      current = {
+        id: camaId, cama: camaId, ward: currentWard,
+        nombre: nombre, sexo: sexo, edad: edad, ingreso: ingreso,
+        diag:'', antec:'', med:'', alergias:'No refiere', atb:'', pendientes:'', novedades:'',
+        _empty: !nombre
+      };
+      fieldMode = null;
+      continue;
+    }
+
+    if (!current) continue;
+
+    // Detectar sexo/edad
+    var metaMatch = metaRe.exec(line);
+    if (metaMatch) {
+      current.sexo  = metaMatch[1].toUpperCase() === 'F' ? '♀' : '♂';
+      current.edad  = metaMatch[2] ? parseInt(metaMatch[2], 10) : null;
+      continue;
+    }
+
+    // Detectar fecha de ingreso
+    var fiMatch = fiRe.exec(line);
+    if (fiMatch && !current.ingreso) {
+      current.ingreso = fiMatch[1];
+    }
+
+    // Detectar campos clínicos
+    var matched = false;
+    for (var j = 0; j < fieldPatterns.length; j++) {
+      var fp = fieldPatterns[j];
+      var fm = fp.re.exec(line);
+      if (fm) {
+        fieldMode = fp.field;
+        var val = fm[1].trim();
+        // Limpiar marcadores vacíos
+        if (val && val !== '---' && val !== '-') {
+          current[fieldMode] = val;
+        }
+        matched = true;
+        break;
+      }
+    }
+    if (matched) continue;
+
+    // Continuar campo actual (línea de continuación)
+    if (fieldMode && current[fieldMode] !== undefined) {
+      if (line && line !== '---' && line !== '-' && line.length > 1) {
+        var sep = ['diag','antec','novedades','pendientes'].includes(fieldMode) ? '\n' : ' · ';
+        if (current[fieldMode]) current[fieldMode] += sep + line;
+        else current[fieldMode] = line;
+      }
+    }
+  }
+  if (current) parsed.push(current);
+
+  // Marcar camas vacías como libres
+  parsed.forEach(function(p) {
+    if (p._empty && !p.diag && !p.antec) p.libre = true;
+    delete p._empty;
+  });
+
+  return parsed;
+}
+
+// ── Diff entre estado actual y DOCX parseado ─────────────────────────────────
+function showDocxDiff(parsed) {
+  var added = 0, changed = 0, freed = 0, unchanged = 0;
+  var html = '';
+
+  parsed.forEach(function(np) {
+    var existing = patients.find(function(p){ return p.cama === np.cama; });
+    var status   = 'unchanged';
+
+    if (!existing) {
+      status = 'new'; added++;
+    } else if (np.libre && !existing.libre) {
+      status = 'freed'; freed++;
+    } else if (!np.libre && existing.libre) {
+      status = 'new'; added++;
+    } else if (!np.libre && !existing.libre) {
+      // Check if anything changed
+      var fields = ['nombre','diag','antec','med','alergias','atb','pendientes','novedades'];
+      var diffs  = fields.filter(function(f) {
+        return (np[f]||'') !== (existing[f]||'');
+      });
+      if (diffs.length > 0) { status = 'changed'; changed++; }
+      else unchanged++;
+    } else {
+      unchanged++;
+    }
+
+    var bgColor = status === 'unchanged' ? '#fff3cd22' :
+                  status === 'freed'     ? '#f8d7da'   :
+                  status === 'new'       ? '#d4edda'   : '#d4edda';
+    var badge   = status === 'unchanged' ? '' :
+                  status === 'freed'     ? '<span style="font-size:10px;background:#f8d7da;color:#721c24;padding:1px 6px;border-radius:3px;margin-left:6px;">SE LIBERA</span>' :
+                  status === 'new'       ? '<span style="font-size:10px;background:#d4edda;color:#155724;padding:1px 6px;border-radius:3px;margin-left:6px;">NUEVO INGRESO</span>' :
+                                           '<span style="font-size:10px;background:#d4edda;color:#155724;padding:1px 6px;border-radius:3px;margin-left:6px;">CAMBIÓ</span>';
+
+    html += '<div style="background:' + bgColor + ';border:1px solid var(--border);border-radius:6px;padding:8px 12px;">';
+    html += '<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;">';
+    html += '<span style="font-family:var(--mono);font-size:11px;color:var(--muted);">Cama ' + escHtml(np.cama) + '</span>';
+    if (!np.libre) html += '<span>' + escHtml(np.nombre || '—') + '</span>';
+    else html += '<span style="color:var(--muted)">— LIBRE —</span>';
+    html += badge + '</div>';
+
+    // Show diffs for changed patients
+    if (status === 'changed' && existing) {
+      var fields = ['nombre','diag','antec','med','alergias','atb','pendientes'];
+      fields.forEach(function(f) {
+        var nv = (np[f]||'').trim(), ov = (existing[f]||'').trim();
+        if (nv !== ov && nv) {
+          html += '<div style="font-size:11px;margin-top:4px;color:var(--muted);">';
+          html += '<strong>' + escHtml(FIELD_LABELS[f]||f) + ':</strong> ';
+          html += '<span style="color:var(--danger);text-decoration:line-through">' + escHtml(ov.slice(0,60)||'(vacío)') + '</span> ';
+          html += '→ <span style="color:var(--ok)">' + escHtml(nv.slice(0,60)) + '</span>';
+          html += '</div>';
+        }
+      });
+    }
+    html += '</div>';
+  });
+
+  document.getElementById('docx-diff-container').innerHTML = html;
+  document.getElementById('docx-summary').textContent =
+    parsed.length + ' camas — ' + added + ' nuevos, ' + changed + ' modificados, ' +
+    freed + ' liberados, ' + unchanged + ' sin cambios';
+
+  document.getElementById('docx-step-upload').style.display = 'none';
+  document.getElementById('docx-step-preview').style.display = '';
+  document.getElementById('docx-footer').style.display = 'flex';
+}
+
+function applyDocxImport() {
+  if (!_docxParsed) return;
+
+  // Crear snapshot manual ANTES de aplicar
+  crearSnapshotManual('Antes de importación DOCX', 'docx').then(function() {
+    var ts = new Date().toLocaleString('es-AR');
+    var cambios = 0;
+
+    _docxParsed.forEach(function(np) {
+      var existing = patients.find(function(p){ return p.cama === np.cama; });
+      if (!existing) return; // cama no existe en el sistema
+
+      if (np.libre && !existing.libre) {
+        // Liberar cama
+        if (!history[existing.id]) history[existing.id] = [];
+        history[existing.id].unshift({ts:ts, user:currentUser, field:'estado', before:'Ocupada — '+existing.nombre, after:'Libre (importación DOCX)'});
+        existing.libre = true;
+        cambios++;
+      } else if (!np.libre && existing.libre) {
+        // Ocupar cama
+        if (!history[existing.id]) history[existing.id] = [];
+        history[existing.id].unshift({ts:ts, user:currentUser, field:'estado', before:'Libre', after:'Nuevo ingreso DOCX — '+(np.nombre||'')});
+        Object.assign(existing, np);
+        delete existing.libre;
+        cambios++;
+      } else if (!np.libre && !existing.libre) {
+        // Actualizar campos, preservar ediciones manuales recientes
+        var fields = ['nombre','sexo','edad','ingreso','diag','antec','med','alergias','atb','pendientes','novedades'];
+        fields.forEach(function(f) {
+          var nv = np[f], ov = existing[f];
+          if (nv !== undefined && String(nv||'').trim() !== String(ov||'').trim() && String(nv||'').trim()) {
+            if (!history[existing.id]) history[existing.id] = [];
+            history[existing.id].unshift({ts:ts, user:currentUser, field:f, before:String(ov||''), after:String(nv)});
+            existing[f] = nv;
+            cambios++;
+          }
+        });
+      }
+    });
+
+    closeDocx();
+    renderList();
+    renderDetail();
+    showToast('DOCX aplicado — ' + cambios + ' cambio' + (cambios !== 1 ? 's' : ''));
+    if (typeof window._syncPush === 'function') window._syncPush();
+  });
+}
+
+// ── VERSIONES / SNAPSHOTS ─────────────────────────────────────────────────────
+var SB_URL_V = 'https://hebvxqwtyacqzezuxjau.supabase.co';
+var SB_KEY_V = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlYnZ4cXd0eWFjcXplenV4amF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1Mzg3NzMsImV4cCI6MjA5MTExNDc3M30.1PcSTRmYRDtlcdtXccm9aHJIHs2lG10LFGOstiTUGjo';
+
+function sbFetch(path, opts) {
+  return fetch(SB_URL_V + '/rest/v1/' + path, Object.assign({
+    headers: {
+      'apikey': SB_KEY_V,
+      'Authorization': 'Bearer ' + SB_KEY_V,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  }, opts));
+}
+
+function showVersiones() {
+  document.getElementById('versiones-modal').classList.add('open');
+  loadVersiones();
+}
+
+function closeVersiones() { document.getElementById('versiones-modal').classList.remove('open'); }
+function closeVersionesOutside(e) { if (e.target === document.getElementById('versiones-modal')) closeVersiones(); }
+
+function loadVersiones() {
+  var list = document.getElementById('versiones-list');
+  list.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Cargando…</div>';
+
+  sbFetch('clinica_snapshots?select=id,created_at,label,source,created_by&order=created_at.desc&limit=30')
+    .then(function(r){ return r.json(); })
+    .then(function(rows) {
+      if (!rows || rows.length === 0) {
+        list.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No hay versiones guardadas todavía.</div>';
+        return;
+      }
+      list.innerHTML = rows.map(function(row) {
+        var date = new Date(row.created_at);
+        var dateStr = date.toLocaleDateString('es-AR', {weekday:'short', day:'numeric', month:'short'});
+        var timeStr = date.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+        var sourceIcon = row.source === 'docx' ? '📄' : row.source === 'manual' ? '📸' : '🔄';
+        var sourceColor = row.source === 'docx' ? 'var(--accent)' : row.source === 'manual' ? 'var(--ok)' : 'var(--muted)';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border);">' +
+          '<div style="font-size:20px;flex-shrink:0;">' + sourceIcon + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:13px;font-weight:600;">' + escHtml(row.label) + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">' + dateStr + ' · ' + timeStr + (row.created_by ? ' · ' + escHtml(row.created_by) : '') + '</div>' +
+          '</div>' +
+          '<button onclick="previsualizarVersion(' + row.id + ',\'' + escHtml(row.label) + '\')" ' +
+            'style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--text);white-space:nowrap;">Ver</button>' +
+          '<button onclick="restaurarVersion(' + row.id + ',\'' + escHtml(row.label) + '\')" ' +
+            'style="font-size:11px;padding:4px 10px;border:1px solid var(--accent);border-radius:5px;background:var(--accent-light);cursor:pointer;font-family:var(--sans);color:var(--accent);white-space:nowrap;">Restaurar</button>' +
+          '</div>';
+      }).join('');
+    })
+    .catch(function(e) {
+      list.innerHTML = '<div style="color:var(--danger);font-size:13px;text-align:center;padding:20px;">Error: ' + escHtml(e.message) + '</div>';
+    });
+}
+
+function crearSnapshotManual(label, source) {
+  label  = label  || 'Manual — ' + new Date().toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  source = source || 'manual';
+  return sbFetch('clinica_snapshots', {
+    method: 'POST',
+    body: JSON.stringify({
+      label: label,
+      source: source,
+      created_by: currentUser || 'Sistema',
+      data: { patients: patients, usuarios: usuarios, history: history, visits: visits }
+    })
+  }).then(function(r) {
+    if (source === 'manual') {
+      showToast('Versión guardada: ' + label);
+      if (document.getElementById('versiones-modal').classList.contains('open')) loadVersiones();
+    }
+    return r;
+  }).catch(function(e) {
+    if (source === 'manual') showToast('Error al guardar: ' + e.message);
+  });
+}
+
+function previsualizarVersion(id, label) {
+  sbFetch('clinica_snapshots?id=eq.' + id + '&select=data,created_at')
+    .then(function(r){ return r.json(); })
+    .then(function(rows) {
+      if (!rows || !rows[0]) return;
+      var data = rows[0].data;
+      var date = new Date(rows[0].created_at).toLocaleString('es-AR');
+      var info = 'Versión: ' + label + '\nFecha: ' + date + '\nCamas: ' + (data.patients ? data.patients.length : '?');
+      showToast(info);
+      // Abrir ventana con resumen
+      var win = window.open('', '_blank', 'width=600,height=500');
+      if (!win) { showToast('Permitir popups para previsualizar'); return; }
+      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Vista previa — ' + label + '</title>' +
+        '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#1a1917}' +
+        'h1{font-size:15px;margin-bottom:4px}h2{font-size:12px;color:#1a4a8a;margin:14px 0 4px}' +
+        'table{width:100%;border-collapse:collapse}td,th{padding:4px 8px;border:0.5px solid #ccc;vertical-align:top}' +
+        'th{background:#f0f0f0;font-weight:bold}</style></head><body>' +
+        '<h1>📸 ' + label + '</h1><p style="color:#666;font-size:11px">' + date + '</p>' +
+        '<table><thead><tr><th>Cama</th><th>Paciente</th><th>Diagnóstico</th><th>ATB</th></tr></thead><tbody>' +
+        (data.patients || []).map(function(p) {
+          return '<tr><td>' + escHtml(p.cama) + '</td><td>' + (p.libre ? '<em>Libre</em>' : escHtml(p.nombre||'')) + '</td>' +
+            '<td>' + escHtml((p.diag||'').slice(0,60)) + '</td><td>' + escHtml(p.atb||'') + '</td></tr>';
+        }).join('') + '</tbody></table></body></html>';
+      win.document.write(html);
+      win.document.close();
+    });
+}
+
+function restaurarVersion(id, label) {
+  showConfirm(
+    'Restaurar versión',
+    'Se reemplazarán TODOS los datos actuales con la versión "' + label + '". Esta acción se puede deshacer guardando una versión antes. ¿Confirmás?',
+    'Restaurar', 'danger',
+    function() {
+      // Guardar snapshot del estado actual antes de restaurar
+      crearSnapshotManual('Antes de restaurar "' + label + '"', 'manual').then(function() {
+        sbFetch('clinica_snapshots?id=eq.' + id + '&select=data')
+          .then(function(r){ return r.json(); })
+          .then(function(rows) {
+            if (!rows || !rows[0]) { showToast('Error: versión no encontrada'); return; }
+            var data = rows[0].data;
+            if (data.patients) patients = data.patients;
+            if (data.usuarios) { usuarios = data.usuarios; refreshUserSelect(); }
+            if (data.history)  history  = data.history;
+            if (data.visits)   visits   = data.visits;
+            renderList();
+            renderDetail();
+            closeVersiones();
+            showToast('Versión "' + label + '" restaurada');
+            if (typeof window._syncPush === 'function') window._syncPush();
+          });
+      });
+    }
+  );
+}
+
 // ── START ─────────────────────────────────────────────────────────────────────
 init();
 
@@ -3105,6 +3624,7 @@ window.addEventListener('popstate', function() {
 </script>
 <!--CLINICA_SYNC_PLACEHOLDER-->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script>
 (function(){
 'use strict';
