@@ -614,6 +614,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 /* Ocultar app hasta que haya login */
 #app-shell { opacity: 0; pointer-events: none; transition: opacity .3s; }
 #app-shell.visible { opacity: 1; pointer-events: all; }
+.mobile-back-btn { display: none; }
+
 @media (max-width: 768px) {
 
   /* Header compacto */
@@ -711,7 +713,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .mobile-session-sheet { display: none; }
 .mobile-filter-sheet  { display: none; }
 .sheet-overlay        { display: none; }
-@media (min-width: 769px) { .mobile-back-btn { display: none; } }
+
 @media (max-width: 768px) {
   .bottom-bar {
     display: flex;
@@ -951,13 +953,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   <div class="list-pane" id="list-pane"></div>
 
   <!-- DETAIL -->
-  <div class="detail-pane" id="detail-pane">
-    <button class="mobile-back-btn" id="mobile-back-btn" onclick="mobileBackToList()">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-      Lista de camas
-    </button>
-    <div id="detail-content"></div>
-  </div>
+  <div class="detail-pane" id="detail-pane"></div>
     <div class="detail-empty">
       <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg>
       <span>Seleccioná una cama para ver el detalle</span>
@@ -2215,7 +2211,7 @@ function setWard(w, el) {
   document.querySelectorAll('.ward-item').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   currentPatient = null;
-  document.getElementById('detail-content').innerHTML = '<div class="detail-empty"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg><span>Seleccioná una cama para ver el detalle</span></div>';
+  document.getElementById('detail-pane').innerHTML = '<div class="detail-empty"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg><span>Seleccioná una cama para ver el detalle</span></div>';
   renderList();
 }
 
@@ -2300,7 +2296,7 @@ function selectPatient(id) {
 
 function renderDetail() {
   const p = currentPatient;
-  const pane = document.getElementById('detail-content');
+  const pane = document.getElementById('detail-pane');
   if (!p) { pane.innerHTML=''; return; }
 
   if (p.libre) {
@@ -3622,10 +3618,22 @@ selectPatient = function(id) {
   _origSelectPatient(id);
   if (isMobile()) {
     var pane = document.getElementById('detail-pane');
+    _prependBackBtn(pane);
     pane.classList.add('mobile-open');
     pane.scrollTop = 0;
   }
 };
+
+function _prependBackBtn(pane) {
+  // Remove existing back btn if present, then prepend fresh one
+  var existing = pane.querySelector('.mobile-back-btn');
+  if (existing) existing.remove();
+  var btn = document.createElement('button');
+  btn.className = 'mobile-back-btn';
+  btn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Lista de camas';
+  btn.onclick = mobileBackToList;
+  pane.insertBefore(btn, pane.firstChild);
+}
 
 function mobileBackToList() {
   var pane = document.getElementById('detail-pane');
