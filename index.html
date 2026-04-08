@@ -84,6 +84,14 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .logo { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: 0.05em; opacity: 0.9; }
 .header-date { font-size: 12px; opacity: 0.65; font-family: var(--mono); }
 .header-right { display: flex; align-items: center; gap: 12px; }
+.header-actions-desktop { display: flex; align-items: center; gap: 8px; }
+.header-username { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-action-btn {
+  background: rgba(255,255,255,.15); color: #fff;
+  border: 1px solid rgba(255,255,255,.3); border-radius: 6px;
+  padding: 5px 10px; font-size: 11px; font-weight: 500;
+  cursor: pointer; font-family: var(--sans);
+}
 .user-badge {
   display: flex; align-items: center; gap: 8px;
   background: rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px;
@@ -605,8 +613,9 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   .header { height: 48px; padding: 0 12px; }
   .logo { font-size: 11px; }
   .header-date { display: none; }
+  .header-actions-desktop { display: none; }
   .log-btn { font-size: 11px; padding: 4px 8px; }
-  .save-btn { font-size: 11px; padding: 4px 8px; }
+  .header-username { max-width: 80px; }
 
   /* Toolbar compacto */
   .toolbar { padding: 8px 12px; gap: 8px; }
@@ -846,16 +855,16 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   <div class="header-right">
     <div class="user-badge" style="cursor:default;">
       <div class="user-avatar" id="user-initials">—</div>
-      <span id="user-name-display">Sin sesión</span>
+      <span id="user-name-display" class="header-username">Sin sesión</span>
     </div>
-    <button id="logout-btn" onclick="applyLogout()" title="Cerrar sesión"
-      style="display:none;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans);">
+    <button id="logout-btn" onclick="applyLogout()" title="Cerrar sesión" class="header-action-btn" style="display:none;">
       Cerrar sesión
     </button>
-    <button class="log-btn" onclick="showLog()">Log del día</button>
-    <button class="log-btn" onclick="showNuevoPaciente()" style="background:rgba(255,255,255,.22);">+ Nuevo paciente</button>
-    <button class="log-btn" onclick="exportarPDF()" style="background:rgba(255,255,255,.15);">Exportar PDF</button>
-    <button class="save-btn" id="save-btn" onclick="saveChanges()" disabled>Guardar cambios</button>
+    <div class="header-actions-desktop">
+      <button class="log-btn" onclick="showNuevoPaciente()">+ Nuevo</button>
+      <button class="log-btn" onclick="showLog()">Log del día</button>
+      <button class="log-btn" onclick="exportarPDF()">PDF</button>
+    </div>
   </div>
 </div>
 
@@ -2099,7 +2108,7 @@ function selectPatient(id) {
   currentPatient = patients.find(p=>p.id===id);
   editing = false;
   pendingChanges = {};
-  document.getElementById('save-btn').disabled = true;
+  /* save-btn removed from header */
   renderDetail();
   renderList(); // refresh active state
 }
@@ -2222,13 +2231,13 @@ function toggleEdit() {
   if (!currentUser) { showToast('Seleccioná un usuario antes de editar'); return; }
   editing = !editing;
   pendingChanges = {};
-  document.getElementById('save-btn').disabled = true;
+  /* save-btn removed from header */
   renderDetail();
 }
 
 function markDirty(field, value) {
   pendingChanges[field] = value;
-  document.getElementById('save-btn').disabled = false;
+  /* save-btn removed from header */
 }
 
 function commitChanges() {
@@ -2253,7 +2262,7 @@ function commitChanges() {
 
   pendingChanges = {};
   editing = false;
-  document.getElementById('save-btn').disabled = true;
+  /* save-btn removed from header */
   renderDetail();
   renderList();
   showToast('Cambios guardados correctamente');
@@ -2324,7 +2333,7 @@ function toggleLibre(id) {
         history[p.id].unshift({ts:ts, user:currentUser, field:'estado', before:'Ocupada — '+p.nombre, after:'Libre'});
         p.libre = true;
         editing = false; pendingChanges = {};
-        document.getElementById('save-btn').disabled = true;
+        /* save-btn removed from header */
         renderList(); renderDetail();
         showToast('Cama ' + p.cama + ' marcada como libre');
         if (typeof window._syncPush === 'function') window._syncPush();
@@ -2842,7 +2851,7 @@ function ejecutarTraslado() {
   currentPatient = dest;
   editing = false;
   pendingChanges = {};
-  document.getElementById('save-btn').disabled = true;
+  /* save-btn removed from header */
 
   closeTraslado();
   renderList();
