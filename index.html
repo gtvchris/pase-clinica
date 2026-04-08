@@ -862,8 +862,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     </button>
     <div class="header-actions-desktop">
       <button class="log-btn" onclick="showNuevoPaciente()">+ Nuevo</button>
-      <button class="log-btn" onclick="showDocxImport()">↑ DOCX</button>
-      <button class="log-btn" onclick="showVersiones()">🕐 Versiones</button>
+      <button class="log-btn" id="header-docx-btn" onclick="showDocxImport()" style="display:none;">↑ DOCX</button>
+      <button class="log-btn" id="header-ver-btn" onclick="showVersiones()" style="display:none;">🕐 Versiones</button>
       <button class="log-btn" onclick="showLog()">Log</button>
       <button class="log-btn" onclick="exportarPDF()">PDF</button>
     </div>
@@ -917,7 +917,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
       <select id="user-select" onchange="requestLogin()" style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); font-family:var(--sans); cursor:pointer; color:var(--text);">
         <option value="">— Seleccionar —</option>
       </select>
-      <button onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;">⚙ Administrar usuarios</button>
+      <button id="sidebar-admin-btn" onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;display:none;">⚙ Administrar usuarios</button>
     </div>
   </div>
 
@@ -1079,7 +1079,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <span>Nuevo</span>
   </button>
   <!-- DOCX -->
-  <button class="bb-btn" onclick="showDocxImport()">
+  <button class="bb-btn" id="bb-docx" onclick="showDocxImport()" style="display:none;">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3-3 3 3"/></svg>
     <span>DOCX</span>
   </button>
@@ -1104,7 +1104,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <span>PDF</span>
   </button>
   <!-- Usuarios -->
-  <button class="bb-btn" onclick="showUsuarios()">
+  <button class="bb-btn" id="bb-usuarios" onclick="showUsuarios()" style="display:none;">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M21 20c0-2-1.8-3.5-4-3.5"/></svg>
     <span>Usuarios</span>
   </button>
@@ -1805,6 +1805,22 @@ function _resetSelect() {
   if (mSel) mSel.value = val;
 }
 
+function _setAdminUI(isAdmin) {
+  // Mobile bottom bar buttons
+  var bbDocx     = document.getElementById('bb-docx');
+  var bbUsuarios = document.getElementById('bb-usuarios');
+  if (bbDocx)     bbDocx.style.display     = isAdmin ? 'flex' : 'none';
+  if (bbUsuarios) bbUsuarios.style.display = isAdmin ? 'flex' : 'none';
+  // Sidebar admin button
+  var sideAdmin  = document.getElementById('sidebar-admin-btn');
+  if (sideAdmin)  sideAdmin.style.display  = isAdmin ? 'block' : 'none';
+  // Desktop header DOCX and Versiones buttons
+  var hdDocx = document.getElementById('header-docx-btn');
+  var hdVer  = document.getElementById('header-ver-btn');
+  if (hdDocx) hdDocx.style.display = isAdmin ? '' : 'none';
+  if (hdVer)  hdVer.style.display  = isAdmin ? '' : 'none';
+}
+
 function _applyLogin(u) {
   currentUser   = u.nombre;
   currentUserId = u.id;
@@ -1812,6 +1828,10 @@ function _applyLogin(u) {
   document.getElementById('user-initials').textContent      = initials;
   document.getElementById('user-name-display').textContent  = u.nombre;
   document.getElementById('logout-btn').style.display       = 'inline-block';
+
+  // Show/hide admin-only UI
+  _setAdminUI(u.rol === 'admin');
+
   // Sync both selects
   document.getElementById('user-select').value = u.id;
   var mSel = document.getElementById('user-select-mobile');
@@ -1833,6 +1853,8 @@ function applyLogout() {
   document.getElementById('user-initials').textContent     = '—';
   document.getElementById('user-name-display').textContent = 'Sin sesión';
   document.getElementById('logout-btn').style.display      = 'none';
+  // Hide all admin-only UI
+  _setAdminUI(false);
   document.getElementById('user-select').value = '';
   var mSel = document.getElementById('user-select-mobile');
   if (mSel) mSel.value = '';
@@ -2552,7 +2574,8 @@ function exportarPDF() {
     '</style></head><body>' +
     '<div class="no-print" style="background:#1a4a8a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
     '<span style="font-weight:bold">Pase de Clínica — ' + todayShort + '</span>' +
-    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">Imprimir / Guardar PDF</button>' +
+    '<button onclick="window.close()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.5);padding:6px 14px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">✕ Cerrar</button>' +
+    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">🖨 Imprimir / PDF</button>' +
     '</div>' +
     '<h1 class="doc-title">PASE DE CLÍNICA</h1>' +
     '<h1 class="doc-date">' + today + '</h1>' +
