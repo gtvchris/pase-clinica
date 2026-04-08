@@ -92,13 +92,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   padding: 5px 10px; font-size: 11px; font-weight: 500;
   cursor: pointer; font-family: var(--sans);
 }
-.user-menu-item {
-  display: block; width: 100%; text-align: left; padding: 8px 12px;
-  font-size: 13px; font-family: var(--sans); color: var(--text);
-  background: none; border: none; cursor: pointer; border-radius: 6px;
-  transition: background .12s; -webkit-tap-highlight-color: transparent;
-}
-.user-menu-item:hover { background: var(--surface2); }
 .user-badge {
   display: flex; align-items: center; gap: 8px;
   background: rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px;
@@ -614,8 +607,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 /* Ocultar app hasta que haya login */
 #app-shell { opacity: 0; pointer-events: none; transition: opacity .3s; }
 #app-shell.visible { opacity: 1; pointer-events: all; }
-.mobile-back-btn { display: none; }
-
 @media (max-width: 768px) {
 
   /* Header compacto */
@@ -651,21 +642,18 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 
   /* Detalle — overlay deslizable encima de la lista */
   .detail-pane {
-    display: none !important;
-  }
-  .detail-pane.mobile-open {
     display: block !important;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 60px;
     background: var(--bg);
     z-index: 50;
     overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
     padding: 12px 14px 20px;
-    animation: slideInRight 0.25s cubic-bezier(.4,0,.2,1);
   }
-  @keyframes slideInRight {
-    from { transform: translateX(100%); }
-    to   { transform: translateX(0); }
+  .detail-pane.mobile-open {
+    transform: translateX(0);
   }
 
   /* Detail header adaptado */
@@ -686,7 +674,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   /* Visita bar compacta */
   .visita-bar { flex-wrap: wrap; gap: 8px; }
 
-  /* Back button - always present in detail pane, visible on mobile */
+  /* Back button (solo mobile) */
   .mobile-back-btn {
     display: flex;
     align-items: center;
@@ -698,9 +686,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     color: var(--accent);
     cursor: pointer;
     font-family: var(--sans);
-    padding: 10px 0 14px;
-    margin-bottom: 2px;
-    -webkit-tap-highlight-color: transparent;
+    padding: 8px 0 12px;
+    margin-bottom: 4px;
   }
 
   /* Patient card más compacto en mobile */
@@ -713,7 +700,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .mobile-session-sheet { display: none; }
 .mobile-filter-sheet  { display: none; }
 .sheet-overlay        { display: none; }
-
+.mobile-back-btn      { display: none; }
 @media (max-width: 768px) {
   .bottom-bar {
     display: flex;
@@ -866,28 +853,13 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <div class="header-date" id="header-date"></div>
   </div>
   <div class="header-right">
-    <!-- User dropdown -->
-    <div id="user-menu-wrap" style="position:relative;">
-      <div class="user-badge" id="user-badge-btn" onclick="toggleUserMenu()" style="cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;">
-        <div class="user-avatar" id="user-initials">—</div>
-        <span id="user-name-display" class="header-username">Sin sesión</span>
-        <svg id="user-menu-chevron" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="opacity:.6;transition:transform .2s;flex-shrink:0;"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
-      <!-- Dropdown -->
-      <div id="user-menu-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.15);min-width:200px;z-index:500;overflow:hidden;">
-        <div id="user-menu-header" style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);">
-          <div id="user-menu-name" style="font-weight:600;font-size:13px;"></div>
-          <div id="user-menu-role" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
-        </div>
-        <div style="padding:6px;">
-          <button onclick="showCambiarPass()" class="user-menu-item">🔑 Cambiar contraseña</button>
-          <div id="user-menu-admin-sep" style="display:none;height:1px;background:var(--border);margin:4px 0;"></div>
-          <button id="user-menu-admin-btn" onclick="closeUserMenu();showUsuarios();" class="user-menu-item" style="display:none;">⚙ Administrar usuarios</button>
-          <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-          <button onclick="closeUserMenu();applyLogout();" class="user-menu-item" style="color:var(--danger);">← Cerrar sesión</button>
-        </div>
-      </div>
+    <div class="user-badge" style="cursor:default;">
+      <div class="user-avatar" id="user-initials">—</div>
+      <span id="user-name-display" class="header-username">Sin sesión</span>
     </div>
+    <button id="logout-btn" onclick="applyLogout()" title="Cerrar sesión" class="header-action-btn" style="display:none;">
+      Cerrar sesión
+    </button>
     <div class="header-actions-desktop">
       <button class="log-btn" onclick="showNuevoPaciente()">+ Nuevo</button>
       <button class="log-btn" onclick="showDocxImport()">↑ DOCX</button>
@@ -945,7 +917,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
       <select id="user-select" onchange="requestLogin()" style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); font-family:var(--sans); cursor:pointer; color:var(--text);">
         <option value="">— Seleccionar —</option>
       </select>
-      <button id="sidebar-usuarios-btn" onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;display:none;">⚙ Administrar usuarios</button>
+      <button onclick="showUsuarios()" style="width:100%;padding:5px 8px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);color:var(--muted);text-align:left;">⚙ Administrar usuarios</button>
     </div>
   </div>
 
@@ -953,7 +925,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   <div class="list-pane" id="list-pane"></div>
 
   <!-- DETAIL -->
-  <div class="detail-pane" id="detail-pane"></div>
+  <div class="detail-pane" id="detail-pane">
     <div class="detail-empty">
       <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg>
       <span>Seleccioná una cama para ver el detalle</span>
@@ -1096,15 +1068,25 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 
 <!-- MOBILE BOTTOM BAR -->
 <div class="bottom-bar" id="bottom-bar">
-  <!-- Nuevo paciente (solo admin) -->
-  <button class="bb-btn" id="bb-nuevo-btn" onclick="showNuevoPaciente()">
+  <!-- Inicio -->
+  <button class="bb-btn" id="bb-inicio" onclick="volverInicio()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Inicio</span>
+  </button>
+  <!-- Nuevo paciente -->
+  <button class="bb-btn" onclick="showNuevoPaciente()">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M19 8v6M22 11h-6"/></svg>
     <span>Nuevo</span>
   </button>
-  <!-- DOCX (solo admin) -->
-  <button class="bb-btn" id="bb-docx-btn" onclick="showDocxImport()">
+  <!-- DOCX -->
+  <button class="bb-btn" onclick="showDocxImport()">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6M9 15l3-3 3 3"/></svg>
     <span>DOCX</span>
+  </button>
+  <!-- Sesión -->
+  <button class="bb-btn" id="bb-session" onclick="toggleSessionSheet()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <span id="bb-session-label">Sesión</span>
   </button>
   <!-- Filtros -->
   <button class="bb-btn" id="bb-filter" onclick="toggleFilterSheet()">
@@ -1120,6 +1102,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   <button class="bb-btn" onclick="exportarPDF()">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h1.5a1.5 1.5 0 0 0 0-3H9v6m7-6v6m-2-3h2"/></svg>
     <span>PDF</span>
+  </button>
+  <!-- Usuarios -->
+  <button class="bb-btn" onclick="showUsuarios()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M21 20c0-2-1.8-3.5-4-3.5"/></svg>
+    <span>Usuarios</span>
   </button>
 </div>
 
@@ -1685,10 +1672,13 @@ function _afterUsersLoaded() {
 }
 
 // ── USUARIOS ──────────────────────────────────────────────────────────────────
-// Usuarios se cargan desde Supabase — esta lista es solo un fallback temporal
-// y se reemplaza completamente cuando llegan los datos de la nube
 let usuarios = [
-  { id: 'u6', nombre: 'Administrador', rol: 'admin', pass: 'admin', activo: true, creado: '07/04/2026' },
+  { id: 'u1', nombre: 'Dr. García',       rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u2', nombre: 'Dra. Rodríguez',   rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u3', nombre: 'Dr. Pérez',        rol: 'medico',     pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u4', nombre: 'Enf. López',       rol: 'enfermeria', pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u5', nombre: 'Enf. Martínez',    rol: 'enfermeria', pass: '1234', activo: true,  creado: '07/04/2026' },
+  { id: 'u6', nombre: 'Administrador',    rol: 'admin',      pass: 'admin', activo: true, creado: '07/04/2026' },
 ];
 let editingUserId = null;
 
@@ -1821,26 +1811,7 @@ function _applyLogin(u) {
   var initials  = u.nombre.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
   document.getElementById('user-initials').textContent      = initials;
   document.getElementById('user-name-display').textContent  = u.nombre;
-
-  // Update user menu header info
-  document.getElementById('user-menu-name').textContent = u.nombre;
-  document.getElementById('user-menu-role').textContent = ROL_LABEL[u.rol] || u.rol;
-
-  // Show admin-only items
-  var isAdmin = u.rol === 'admin';
-  document.getElementById('user-menu-admin-btn').style.display = isAdmin ? 'block' : 'none';
-  document.getElementById('user-menu-admin-sep').style.display = isAdmin ? 'block' : 'none';
-
-  // Sidebar admin button
-  var sideBtn = document.getElementById('sidebar-usuarios-btn');
-  if (sideBtn) sideBtn.style.display = isAdmin ? 'block' : 'none';
-
-  // Mobile bottom bar — admin-only buttons
-  var bbNuevo = document.getElementById('bb-nuevo-btn');
-  var bbDocx  = document.getElementById('bb-docx-btn');
-  if (bbNuevo) bbNuevo.style.display = isAdmin ? 'flex' : 'none';
-  if (bbDocx)  bbDocx.style.display  = isAdmin ? 'flex' : 'none';
-
+  document.getElementById('logout-btn').style.display       = 'inline-block';
   // Sync both selects
   document.getElementById('user-select').value = u.id;
   var mSel = document.getElementById('user-select-mobile');
@@ -1856,75 +1827,12 @@ function _applyLogin(u) {
   if (currentPatient) renderDetail();
 }
 
-// ── USER MENU DROPDOWN ────────────────────────────────────────────
-function toggleUserMenu() {
-  if (!currentUser) return; // no menu if not logged in
-  var dd = document.getElementById('user-menu-dropdown');
-  var ch = document.getElementById('user-menu-chevron');
-  var isOpen = dd.style.display !== 'none';
-  if (isOpen) {
-    dd.style.display = 'none';
-    ch.style.transform = '';
-  } else {
-    dd.style.display = 'block';
-    ch.style.transform = 'rotate(180deg)';
-    // Close on outside click
-    setTimeout(function() {
-      document.addEventListener('click', closeUserMenuOutside, { once: true });
-    }, 10);
-  }
-}
-
-function closeUserMenu() {
-  document.getElementById('user-menu-dropdown').style.display = 'none';
-  document.getElementById('user-menu-chevron').style.transform = '';
-}
-
-function closeUserMenuOutside(e) {
-  var wrap = document.getElementById('user-menu-wrap');
-  if (wrap && !wrap.contains(e.target)) closeUserMenu();
-}
-
-// Open change-password view directly from header menu
-function showCambiarPass() {
-  closeUserMenu();
-  // Open the usuarios modal in self-view mode
-  var me = usuarios.find(function(u){ return u.id === currentUserId; });
-  if (!me) return;
-  var modal = document.getElementById('usuarios-modal');
-  var adminV = document.getElementById('usuarios-admin-view');
-  var selfV  = document.getElementById('usuarios-self-view');
-  var noneV  = document.getElementById('usuarios-nosession-view');
-  var title  = document.getElementById('usuarios-modal-title');
-  var note   = document.getElementById('usuarios-admin-note');
-  adminV.style.display = 'none';
-  selfV.style.display  = 'none';
-  noneV.style.display  = 'none';
-  title.textContent = 'Cambiar contraseña';
-  note.textContent  = me.nombre + ' · ' + (ROL_LABEL[me.rol] || me.rol);
-  document.getElementById('self-pass-old').value   = '';
-  document.getElementById('self-pass-new').value   = '';
-  document.getElementById('self-pass-new2').value  = '';
-  document.getElementById('self-pass-error').textContent = '';
-  selfV.style.display = 'block';
-  modal.classList.add('open');
-}
 function applyLogout() {
-  closeUserMenu();
   currentUser   = '';
   currentUserId = null;
   document.getElementById('user-initials').textContent     = '—';
   document.getElementById('user-name-display').textContent = 'Sin sesión';
-  document.getElementById('user-menu-name').textContent    = '';
-  document.getElementById('user-menu-role').textContent    = '';
-  document.getElementById('user-menu-admin-btn').style.display = 'none';
-  document.getElementById('user-menu-admin-sep').style.display = 'none';
-  var sideBtn = document.getElementById('sidebar-usuarios-btn');
-  if (sideBtn) sideBtn.style.display = 'none';
-  var bbNuevo = document.getElementById('bb-nuevo-btn');
-  var bbDocx  = document.getElementById('bb-docx-btn');
-  if (bbNuevo) bbNuevo.style.display = 'none';
-  if (bbDocx)  bbDocx.style.display  = 'none';
+  document.getElementById('logout-btn').style.display      = 'none';
   document.getElementById('user-select').value = '';
   var mSel = document.getElementById('user-select-mobile');
   if (mSel) mSel.value = '';
@@ -1984,7 +1892,7 @@ function showUsuarios() {
       renderUsuariosList();
     } else {
       title.textContent = 'Mi cuenta';
-      note.textContent  = `Usuario: ${me ? me.nombre : ''} · ${me ? (ROL_LABEL[me.rol]||'') : ''}`;
+      note.textContent  = `Usuario: ${me ? me.nombre : ''} · ${ROL_LABEL[me?.rol]||''}`;
       // Clear self-change fields
       document.getElementById('self-pass-old').value   = '';
       document.getElementById('self-pass-new').value   = '';
@@ -2211,7 +2119,7 @@ function setWard(w, el) {
   document.querySelectorAll('.ward-item').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   currentPatient = null;
-  document.getElementById('detail-pane').innerHTML = '<div class="detail-empty"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg><span>Seleccioná una cama para ver el detalle</span></div>';
+  document.getElementById('detail-pane').innerHTML = `<div class="detail-empty"><svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg><span>Seleccioná una cama para ver el detalle</span></div>`;
   renderList();
 }
 
@@ -2261,7 +2169,7 @@ function renderList() {
         ${hasAlrg?'<span class="tag tag-alergia">ALERGIA</span>':''}
         ${hasPend?'<span class="tag tag-pendiente">PENDIENTE</span>':''}
         ${visited
-          ? `<span class="tag tag-visitado">✓ ${escHtml((lastVisit.ts.split(', ')[1]||'').slice(0,5)||'visitado')}</span>`
+          ? `<span class="tag tag-visitado">✓ ${escHtml(lastVisit.ts.split(', ')[1]?.slice(0,5)||'visitado')}</span>`
           : `<span class="tag tag-sinvisita">Sin visita</span>`}
       </div>
     </div>`;
@@ -2644,8 +2552,7 @@ function exportarPDF() {
     '</style></head><body>' +
     '<div class="no-print" style="background:#1a4a8a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
     '<span style="font-weight:bold">Pase de Clínica — ' + todayShort + '</span>' +
-    '<button onclick="window.close()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">✕ Cerrar</button>' +
-    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">🖨 Imprimir / PDF</button>' +
+    '<button onclick="window.print()" style="background:#fff;color:#1a4a8a;border:none;padding:6px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">Imprimir / Guardar PDF</button>' +
     '</div>' +
     '<h1 class="doc-title">PASE DE CLÍNICA</h1>' +
     '<h1 class="doc-date">' + today + '</h1>' +
@@ -2809,7 +2716,7 @@ function truncate(str, n) {
 // ── DOWNLOAD CSV ──────────────────────────────────────────────────────────────
 function downloadCSV() {
   const entries = getFilteredLogEntries();
-  const today   = new Date().toLocaleDateString('es-AR').split('/').join('_');
+  const today   = new Date().toLocaleDateString('es-AR').replaceAll('/','_');
   const header  = ['Hora','Usuario','Cama','Servicio','Paciente','Tipo de cambio','Campo','Valor anterior','Valor nuevo'];
   const rows    = entries.map(e => [
     e.ts,
@@ -2824,7 +2731,7 @@ function downloadCSV() {
   ]);
 
   const csv = [header, ...rows].map(row =>
-    row.map(cell => `"${String(cell).split('"').join('""')}"`).join(',')
+    row.map(cell => `"${String(cell).replaceAll('"','""')}"`).join(',')
   ).join('\r\n');
 
   const bom  = '\uFEFF'; // UTF-8 BOM for Excel
@@ -2897,14 +2804,7 @@ function closeLogOutside(e) { if (e.target === document.getElementById('log-over
 
 // ── VISITAS ───────────────────────────────────────────────────────────────────
 function hasBeenVisited(id) {
-  if (!visits[id] || visits[id].length === 0) return false;
-  // Check if the most recent visit was today
-  var lastVisit = visits[id][0];
-  if (!lastVisit || !lastVisit.ts) return false;
-  var today = new Date().toLocaleDateString('es-AR');
-  // ts format: "8/4/2026, 10:30:00" — date part is before the comma
-  var visitDate = lastVisit.ts.split(',')[0].trim();
-  return visitDate === today;
+  return !!(visits[id] && visits[id].length > 0);
 }
 
 function marcarVisitado(id) {
@@ -3618,27 +3518,35 @@ selectPatient = function(id) {
   _origSelectPatient(id);
   if (isMobile()) {
     var pane = document.getElementById('detail-pane');
-    _prependBackBtn(pane);
     pane.classList.add('mobile-open');
+    // Inject back button if not present
+    if (!pane.querySelector('.mobile-back-btn')) {
+      var btn = document.createElement('button');
+      btn.className = 'mobile-back-btn';
+      btn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Lista de camas';
+      btn.onclick = mobileBackToList;
+      pane.insertBefore(btn, pane.firstChild);
+    }
+    // Scroll detail to top
     pane.scrollTop = 0;
   }
 };
 
-function _prependBackBtn(pane) {
-  // Remove existing back btn if present, then prepend fresh one
-  var existing = pane.querySelector('.mobile-back-btn');
-  if (existing) existing.remove();
-  var btn = document.createElement('button');
-  btn.className = 'mobile-back-btn';
-  btn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Lista de camas';
-  btn.onclick = mobileBackToList;
-  pane.insertBefore(btn, pane.firstChild);
-}
-
 function mobileBackToList() {
   var pane = document.getElementById('detail-pane');
   pane.classList.remove('mobile-open');
+}
+
+function volverInicio() {
+  // Deselect patient and go back to list on mobile
   currentPatient = null;
+  var pane = document.getElementById('detail-pane');
+  pane.classList.remove('mobile-open');
+  pane.innerHTML = '';
+  // Highlight Inicio button briefly
+  var btn = document.getElementById('bb-inicio');
+  if (btn) { btn.classList.add('active'); setTimeout(function(){ btn.classList.remove('active'); }, 300); }
+  renderList();
 }
 
 // Session sheet
@@ -3665,9 +3573,13 @@ function updateSessionSheetStatus() {
     var me = usuarios.find(function(u){ return u.id === currentUserId; });
     el.textContent = 'Sesión activa: ' + currentUser + (me ? ' · ' + (ROL_LABEL[me.rol]||me.rol) : '');
     el.style.color = 'var(--ok)';
+    document.getElementById('bb-session-label').textContent = currentUser.split(' ')[0];
+    document.getElementById('bb-session').classList.add('active');
   } else {
     el.textContent = 'No hay sesión activa';
     el.style.color = 'var(--muted)';
+    document.getElementById('bb-session-label').textContent = 'Sesión';
+    document.getElementById('bb-session').classList.remove('active');
   }
 }
 
