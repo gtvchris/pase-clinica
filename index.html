@@ -1254,6 +1254,52 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 <div class="toast" id="toast"></div>
 
 <script>
+// ── UTILIDADES ────────────────────────────────────────────────────────────────
+// Escapa caracteres HTML para prevenir XSS en innerHTML
+function escHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Hash de contraseña con SHA-256 + salt (Web Crypto API)
+// Formato almacenado: "sha256:<salt_hex>:<hash_hex>"
+async function hashPassword(plaintext, salt) {
+  if (!salt) {
+    const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+    salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  const encoder = new TextEncoder();
+  const data = encoder.encode(salt + plaintext);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  const hashHex    = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+  return 'sha256:' + salt + ':' + hashHex;
+}
+
+async function verifyPassword(plaintext, stored) {
+  // Legacy plaintext passwords (migration path)
+  if (!stored.startsWith('sha256:')) return plaintext === stored;
+  const parts = stored.split(':');
+  if (parts.length !== 3) return false;
+  const salt = parts[1];
+  const expected = await hashPassword(plaintext, salt);
+  return expected === stored;
+}
+
+// Migrate plaintext passwords to hashed on first login
+async function migratePasswordIfNeeded(u, plaintext) {
+  if (!u.pass.startsWith('sha256:')) {
+    u.pass = await hashPassword(plaintext);
+    // Trigger a push to Supabase so all devices get the hashed version
+    if (typeof window._syncPush === 'function') setTimeout(window._syncPush, 200);
+  }
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const PATIENTS_RAW = [
   {id:'201-1',cama:'201-1',ward:'piso1',nombre:'LOBOS, PATRICIA GABRIELA',sexo:'♀',edad:45,ingreso:'25/03',diag:'IPPB',antec:'Epilepsia',med:'Lamotrigina 500mg c/8hs · Ácido Valproico 500mg c/8hs · Rivotril 0.5mg c/8hs · Levetirazetam 250mg c/12hs',alergias:'No refiere',atb:'PTZ 4.5G + Vancomicina 1G · FI: 31/03/26',pendientes:'Cumplir TTO ATB día 06/04. EVALUAR ALTA: LUNES',novedades:''},
@@ -1362,40 +1408,46 @@ function doLogin() {
   const u = usuarios.find(x => x.id === uid);
   if (!u) { errEl.textContent = 'Usuario no encontrado.'; return; }
 
-  // Check lockout
   const att = loginAttempts[uid] || { count: 0, lockedUntil: 0 };
   if (att.lockedUntil && Date.now() < att.lockedUntil) {
     const secs = Math.ceil((att.lockedUntil - Date.now()) / 1000);
-    lockEl.textContent = `Bloqueado. Intentá en ${secs}s.`;
+    lockEl.textContent = 'Bloqueado. Intentá en ' + secs + 's.';
     startLockoutCountdown(uid);
     return;
   }
 
-  if (pass !== u.pass) {
-    att.count = (att.count || 0) + 1;
-    loginAttempts[uid] = att;
-    if (att.count >= 3) {
-      att.lockedUntil = Date.now() + 2 * 60 * 1000;
-      att.count = 0;
-      lockEl.textContent = 'Demasiados intentos. Bloqueado 2 minutos.';
-      startLockoutCountdown(uid);
-    } else {
-      errEl.textContent = `Contraseña incorrecta. Intentos restantes: ${3 - att.count}`;
-    }
-    document.getElementById('ls-pass').value = '';
-    document.getElementById('ls-pass').focus();
-    return;
-  }
+  const btn = document.getElementById('ls-btn');
+  btn.disabled = true;
+  btn.textContent = 'Verificando…';
 
-  // ✓ Login correcto
-  loginAttempts[uid] = { count: 0, lockedUntil: 0 };
-  _applyLogin(u);
-  // Dismiss login screen
-  const screen = document.getElementById('login-screen');
-  const shell  = document.getElementById('app-shell');
-  screen.classList.add('hidden');
-  shell.classList.add('visible');
-  setTimeout(() => screen.style.display = 'none', 400);
+  verifyPassword(pass, u.pass).then(function(ok) {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    if (!ok) {
+      att.count = (att.count || 0) + 1;
+      loginAttempts[uid] = att;
+      if (att.count >= 3) {
+        att.lockedUntil = Date.now() + 2 * 60 * 1000;
+        att.count = 0;
+        lockEl.textContent = 'Demasiados intentos. Bloqueado 2 minutos.';
+        startLockoutCountdown(uid);
+      } else {
+        errEl.textContent = 'Contraseña incorrecta. Intentos restantes: ' + (3 - att.count);
+      }
+      document.getElementById('ls-pass').value = '';
+      document.getElementById('ls-pass').focus();
+      return;
+    }
+    // ✓ Contraseña correcta — migrar a hash si era texto plano
+    loginAttempts[uid] = { count: 0, lockedUntil: 0 };
+    migratePasswordIfNeeded(u, pass);
+    _applyLogin(u);
+    const screen = document.getElementById('login-screen');
+    const shell  = document.getElementById('app-shell');
+    screen.classList.add('hidden');
+    shell.classList.add('visible');
+    setTimeout(function() { screen.style.display = 'none'; }, 400);
+  });
 }
 
 function startLockoutCountdown(uid) {
@@ -1505,7 +1557,6 @@ function confirmLogin() {
   if (!u) { cancelLogin(); return; }
   if (!pass) { errEl.textContent = 'Ingresá tu contraseña.'; return; }
 
-  // Check lockout again
   var att = loginAttempts[uid] || { count: 0, lockedUntil: 0 };
   if (att.lockedUntil && Date.now() < att.lockedUntil) {
     var remaining = Math.ceil((att.lockedUntil - Date.now()) / 1000);
@@ -1513,25 +1564,31 @@ function confirmLogin() {
     return;
   }
 
-  if (pass !== u.pass) {
-    att.count = (att.count || 0) + 1;
-    loginAttempts[uid] = att;
-    if (att.count >= 3) {
-      att.lockedUntil = Date.now() + 2 * 60 * 1000; // 2 min
-      att.count = 0;
-      errEl.textContent = 'Demasiados intentos. Bloqueado 2 minutos.';
-    } else {
-      errEl.textContent = 'Contraseña incorrecta. Intentos restantes: ' + (3 - att.count);
-    }
-    document.getElementById('login-pass-input').value = '';
-    document.getElementById('login-pass-input').focus();
-    return;
-  }
+  var input = document.getElementById('login-pass-input');
+  input.disabled = true;
 
-  // ✓ Contraseña correcta
-  loginAttempts[uid] = { count: 0, lockedUntil: 0 }; // reset
-  document.getElementById('login-modal').classList.remove('open');
-  _applyLogin(u);
+  verifyPassword(pass, u.pass).then(function(ok) {
+    input.disabled = false;
+    if (!ok) {
+      att.count = (att.count || 0) + 1;
+      loginAttempts[uid] = att;
+      if (att.count >= 3) {
+        att.lockedUntil = Date.now() + 2 * 60 * 1000;
+        att.count = 0;
+        errEl.textContent = 'Demasiados intentos. Bloqueado 2 minutos.';
+      } else {
+        errEl.textContent = 'Contraseña incorrecta. Intentos restantes: ' + (3 - att.count);
+      }
+      input.value = '';
+      input.focus();
+      return;
+    }
+    // ✓ Contraseña correcta
+    loginAttempts[uid] = { count: 0, lockedUntil: 0 };
+    migratePasswordIfNeeded(u, pass);
+    document.getElementById('login-modal').classList.remove('open');
+    _applyLogin(u);
+  });
 }
 
 function cancelLogin() {
@@ -1687,26 +1744,31 @@ function renderUsuariosList() {
 
 // ── CAMBIAR PROPIA CONTRASEÑA (usuarios no-admin) ─────────────────────────────
 function cambiarPropiaPass() {
-  const old  = document.getElementById('self-pass-old').value;
-  const nw   = document.getElementById('self-pass-new').value;
-  const nw2  = document.getElementById('self-pass-new2').value;
-  const errEl= document.getElementById('self-pass-error');
+  const oldPass = document.getElementById('self-pass-old').value;
+  const nw      = document.getElementById('self-pass-new').value;
+  const nw2     = document.getElementById('self-pass-new2').value;
+  const errEl   = document.getElementById('self-pass-error');
   errEl.textContent = '';
 
   const me = usuarios.find(u => u.id === currentUserId);
   if (!me) return;
 
-  if (!old)               { errEl.textContent = 'Ingresá tu contraseña actual.'; return; }
-  if (old !== me.pass)    { errEl.textContent = 'La contraseña actual es incorrecta.'; return; }
-  if (!nw || nw.length < 4){ errEl.textContent = 'La nueva contraseña debe tener al menos 4 caracteres.'; return; }
-  if (nw !== nw2)          { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
-  if (nw === old)          { errEl.textContent = 'La nueva contraseña debe ser diferente a la actual.'; return; }
+  if (!oldPass)                { errEl.textContent = 'Ingresá tu contraseña actual.'; return; }
+  if (!nw || nw.length < 4)   { errEl.textContent = 'La nueva contraseña debe tener al menos 4 caracteres.'; return; }
+  if (nw !== nw2)              { errEl.textContent = 'Las contraseñas no coinciden.'; return; }
+  if (nw === oldPass)          { errEl.textContent = 'La nueva contraseña debe ser diferente a la actual.'; return; }
 
-  me.pass = nw;
-  document.getElementById('self-pass-old').value  = '';
-  document.getElementById('self-pass-new').value  = '';
-  document.getElementById('self-pass-new2').value = '';
-  showToast('Contraseña actualizada correctamente');
+  verifyPassword(oldPass, me.pass).then(function(ok) {
+    if (!ok) { errEl.textContent = 'La contraseña actual es incorrecta.'; return; }
+    hashPassword(nw).then(function(hashed) {
+      me.pass = hashed;
+      document.getElementById('self-pass-old').value  = '';
+      document.getElementById('self-pass-new').value  = '';
+      document.getElementById('self-pass-new2').value = '';
+      showToast('Contraseña actualizada correctamente');
+      if (typeof window._syncPush === 'function') setTimeout(window._syncPush, 200);
+    });
+  });
 }
 
 // ── RESET DE CONTRASEÑA (solo admin) ─────────────────────────────────────────
@@ -1717,7 +1779,7 @@ function resetPass(id) {
     `La contraseña de "${u.nombre}" se reseteará a "1234". El usuario deberá cambiarla en su próxima sesión.`,
     'Resetear', 'danger',
     () => {
-      u.pass = '1234';
+      hashPassword('1234').then(function(h){ u.pass = h; if(typeof window._syncPush==='function') setTimeout(window._syncPush,200); });
       showToast(`Contraseña de "${u.nombre}" reseteada a "1234"`);
     }
   );
@@ -1750,7 +1812,7 @@ function guardarUsuario() {
 
     u.nombre = nombre;
     u.rol    = rol;
-    if (pass) u.pass = pass;
+    if (pass) { hashPassword(pass).then(function(h){ u.pass=h; if(typeof window._syncPush==='function') setTimeout(window._syncPush,200); }); }
     if (currentUserId === u.id) {
       currentUser = u.nombre;
       document.getElementById('user-name-display').textContent = u.nombre;
@@ -1765,7 +1827,16 @@ function guardarUsuario() {
       errEl.textContent = 'Ya existe un usuario con ese nombre.'; return;
     }
     const today = new Date().toLocaleDateString('es-AR');
-    usuarios.push({ id: 'u' + Date.now(), nombre, rol, pass, activo: true, creado: today });
+    var newId = 'u' + Date.now();
+    hashPassword(pass).then(function(hashed) {
+      usuarios.push({ id: newId, nombre: nombre, rol: rol, pass: hashed, activo: true, creado: today });
+      refreshUserSelect();
+      renderUsuariosList();
+      resetUsuarioForm();
+      showToast('Usuario "' + nombre + '" creado');
+      if (typeof window._syncPush === 'function') setTimeout(window._syncPush, 200);
+    });
+    return; // async continues above
     showToast(`Usuario "${nombre}" creado`);
   }
 
@@ -1878,8 +1949,8 @@ function renderList() {
   pane.innerHTML = visible.map(p => {
     const isActive = currentPatient && currentPatient.id === p.id ? 'active' : '';
     if (p.libre) {
-      return `<div class="patient-card libre ${isActive}" onclick="selectPatient('${p.id}')">
-        <div class="patient-cama">CAMA ${p.cama}</div>
+      return `<div class="patient-card libre ${isActive}" onclick="selectPatient('${escHtml(p.id)}')">
+        <div class="patient-cama">CAMA ${escHtml(p.cama)}</div>
         <div class="patient-name" style="color:var(--libre);font-weight:400">— LIBRE —</div>
         <div class="tag-row"><span class="tag tag-libre">libre</span></div>
       </div>`;
@@ -1889,16 +1960,16 @@ function renderList() {
     const hasAlrg  = p.alergias && p.alergias!=='No refiere' && p.alergias!=='No registrada';
     const visited  = hasBeenVisited(p.id);
     const lastVisit = visited ? visits[p.id][0] : null;
-    return `<div class="patient-card ${isActive}${visited ? '' : ' card-sinvisita'}" onclick="selectPatient('${p.id}')">
-      <div class="patient-cama">CAMA ${p.cama}</div>
-      <div class="patient-name">${p.nombre}</div>
-      <div class="patient-diag">${p.diag||''}</div>
+    return `<div class="patient-card ${isActive}${visited ? '' : ' card-sinvisita'}" onclick="selectPatient('${escHtml(p.id)}')">
+      <div class="patient-cama">CAMA ${escHtml(p.cama)}</div>
+      <div class="patient-name">${escHtml(p.nombre)}</div>
+      <div class="patient-diag">${escHtml(p.diag||'')}</div>
       <div class="tag-row">
         ${hasAtb ?'<span class="tag tag-atb">Antibióticos</span>':''}
         ${hasAlrg?'<span class="tag tag-alergia">ALERGIA</span>':''}
         ${hasPend?'<span class="tag tag-pendiente">PENDIENTE</span>':''}
         ${visited
-          ? `<span class="tag tag-visitado">✓ ${lastVisit.ts.split(', ')[1]?.slice(0,5)||'visitado'}</span>`
+          ? `<span class="tag tag-visitado">✓ ${escHtml(lastVisit.ts.split(', ')[1]?.slice(0,5)||'visitado')}</span>`
           : `<span class="tag tag-sinvisita">Sin visita</span>`}
       </div>
     </div>`;
@@ -1958,29 +2029,29 @@ function renderDetail() {
   pane.innerHTML = `
     <div class="detail-header">
       <div>
-        <div class="det-cama">CAMA ${p.cama} · ${wardLabel(p.ward)}</div>
-        <div class="det-name">${p.nombre}</div>
+        <div class="det-cama">CAMA ${escHtml(p.cama)} · ${wardLabel(p.ward)}</div>
+        <div class="det-name">${escHtml(p.nombre)}</div>
         <div class="det-meta">
-          <span>${p.sexo} ${p.edad} años</span>
-          <span>📅 Ingreso: ${p.ingreso}</span>
-          ${hasAlrg?`<span style="color:var(--danger);font-weight:600">⚠ ALERGIA: ${p.alergias}</span>`:''}
+          <span>${escHtml(p.sexo)} ${escHtml(String(p.edad))} años</span>
+          <span>📅 Ingreso: ${escHtml(p.ingreso)}</span>
+          ${hasAlrg?`<span style="color:var(--danger);font-weight:600">⚠ ALERGIA: ${escHtml(p.alergias)}</span>`:''}
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn-hist" onclick="showHistory('${p.id}')">Historial</button>
-        <button class="btn-trasladar" onclick="showTraslado('${p.id}')">Trasladar</button>
+        <button class="btn-hist" onclick="showHistory('${escHtml(p.id)}')">Historial</button>
+        <button class="btn-trasladar" onclick="showTraslado('${escHtml(p.id)}')">Trasladar</button>
         <button class="btn-edit" onclick="toggleEdit()">${editing?'Cancelar':'Editar'}</button>
-        <button class="btn-libre" onclick="toggleLibre('${p.id}')">Marcar como libre</button>
+        <button class="btn-libre" onclick="toggleLibre('${escHtml(p.id)}')">Marcar como libre</button>
       </div>
     </div>
 
     <div class="visita-bar ${visited ? 'visita-bar--ok' : 'visita-bar--pending'}">
       <div class="visita-bar-left">
         ${visited
-          ? `<span class="visita-icon">✓</span><span><strong>Visitado hoy</strong> — última visita ${lastVisit.ts.split(', ')[1]||''} por ${lastVisit.user}${allVisits.length > 1 ? ` · ${allVisits.length} visitas totales` : ''}</span>`
+          ? `<span class="visita-icon">✓</span><span><strong>Visitado hoy</strong> — última visita ${escHtml(lastVisit.ts.split(', ')[1]||'')} por ${escHtml(lastVisit.user)}${allVisits.length > 1 ? ` · ${allVisits.length} visitas totales` : ''}</span>`
           : `<span class="visita-icon visita-icon--warn">!</span><span style="color:var(--warn)"><strong>Sin visita registrada hoy</strong></span>`}
       </div>
-      <button class="btn-visita ${visited ? 'btn-visita--done' : ''}" onclick="marcarVisitado('${p.id}')">
+      <button class="btn-visita ${visited ? 'btn-visita--done' : ''}" onclick="marcarVisitado('${escHtml(p.id)}')">
         ${visited ? '+ Registrar otra visita' : 'Marcar como visitado'}
       </button>
     </div>
@@ -1996,9 +2067,9 @@ function renderDetail() {
 
     <div class="novedades-block">
       <div class="novedades-title">Novedades / evolución</div>
-      ${editing ? `<textarea class="field-edit" id="edit-novedades" rows="4">${p.novedades||''}</textarea>` : 
-        novedLines.length>0 
-          ? novedLines.map(l=>`<div class="novedad-entry"><div class="novedad-dot"></div><div><div class="novedad-text">${l}</div></div></div>`).join('')
+      ${editing ? `<textarea class="field-edit" id="edit-novedades" rows="4">${escHtml(p.novedades||'')}</textarea>` :
+        novedLines.length>0
+          ? novedLines.map(l=>`<div class="novedad-entry"><div class="novedad-dot"></div><div><div class="novedad-text">${escHtml(l)}</div></div></div>`).join('')
           : `<div style="color:var(--muted);font-size:13px">Sin novedades registradas</div>`
       }
       ${editing ? `<div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
@@ -2010,24 +2081,29 @@ function renderDetail() {
 
 }
 
-function fieldBlock(key, label, value, extraClass='', multiline=false, valClass='') {
-  const fullClass = extraClass ? `field-block ${extraClass}` : 'field-block';
-  const dispValue = value && value!=='---' ? value : '<span style="color:var(--muted)">—</span>';
+function fieldBlock(key, label, value, extraClass, multiline, valClass) {
+  extraClass = extraClass || '';
+  multiline  = multiline  || false;
+  valClass   = valClass   || '';
+  const fullClass  = extraClass ? 'field-block ' + extraClass : 'field-block';
+  const safeValue  = value && value !== '---' ? value : '';
+  const dispValue  = safeValue ? escHtml(safeValue) : '<span style="color:var(--muted)">—</span>';
+  const safeLabel  = escHtml(label);
   if (editing) {
     if (multiline) {
       return `<div class="${fullClass}">
-        <div class="field-label">${label}</div>
-        <textarea class="field-edit" id="edit-${key}" rows="3" oninput="markDirty('${key}', this.value)">${value||''}</textarea>
+        <div class="field-label">${safeLabel}</div>
+        <textarea class="field-edit" id="edit-${key}" rows="3" oninput="markDirty('${key}', this.value)">${escHtml(safeValue)}</textarea>
       </div>`;
     } else {
       return `<div class="${fullClass}">
-        <div class="field-label">${label}</div>
-        <input type="text" class="field-edit single" id="edit-${key}" value="${(value||'').replace(/"/g,'&quot;')}" oninput="markDirty('${key}', this.value)">
+        <div class="field-label">${safeLabel}</div>
+        <input type="text" class="field-edit single" id="edit-${key}" value="${escHtml(safeValue)}" oninput="markDirty('${key}', this.value)">
       </div>`;
     }
   }
   return `<div class="${fullClass}">
-    <div class="field-label">${label}</div>
+    <div class="field-label">${safeLabel}</div>
     <div class="field-value ${valClass}">${dispValue}</div>
   </div>`;
 }
@@ -2089,12 +2165,12 @@ function showHistory(id) {
     const fieldLabels = FIELD_LABELS;
     body.innerHTML = entries.map(e=>`
       <div class="hist-entry">
-        <div class="hist-time">${e.ts}</div>
+        <div class="hist-time">${escHtml(e.ts)}</div>
         <div class="hist-content">
-          <div class="hist-field">${fieldLabels[e.field]||e.field}</div>
-          <div class="hist-before">${e.before||'(vacío)'}</div>
-          <div class="hist-after">${e.after||'(vacío)'}</div>
-          <div class="hist-user">Por: ${e.user}</div>
+          <div class="hist-field">${escHtml(FIELD_LABELS[e.field]||e.field)}</div>
+          <div class="hist-before">${escHtml(e.before||'(vacío)')}</div>
+          <div class="hist-after">${escHtml(e.after||'(vacío)')}</div>
+          <div class="hist-user">Por: ${escHtml(e.user)}</div>
         </div>
       </div>
     `).join('');
@@ -2413,13 +2489,13 @@ function renderLogTable() {
     <tbody>
       ${entries.map(e => `
         <tr>
-          <td style="white-space:nowrap;font-family:var(--mono);color:var(--muted)">${e.ts}</td>
-          <td style="white-space:nowrap;font-weight:500">${e.user || '—'}</td>
-          <td style="white-space:nowrap;font-family:var(--mono)">${e.cama}<br><span style="color:var(--muted);font-size:10px">${wardLabel(e.ward)}</span></td>
-          <td style="max-width:140px">${e.nombre || '—'}</td>
+          <td style="white-space:nowrap;font-family:var(--mono);color:var(--muted)">${escHtml(e.ts)}</td>
+          <td style="white-space:nowrap;font-weight:500">${escHtml(e.user || '—')}</td>
+          <td style="white-space:nowrap;font-family:var(--mono)">${escHtml(e.cama)}<br><span style="color:var(--muted);font-size:10px">${escHtml(wardLabel(e.ward))}</span></td>
+          <td style="max-width:140px">${escHtml(e.nombre || '—')}</td>
           <td>${entryTypeBadge(e.field, e.after)}</td>
-          <td class="log-val-before" style="max-width:160px;word-break:break-word">${truncate(e.before, 80)}</td>
-          <td class="log-val-after"  style="max-width:160px;word-break:break-word">${truncate(e.after,  80)}</td>
+          <td class="log-val-before" style="max-width:160px;word-break:break-word">${escHtml(truncate(e.before, 80))}</td>
+          <td class="log-val-after"  style="max-width:160px;word-break:break-word">${escHtml(truncate(e.after,  80))}</td>
         </tr>`).join('')}
     </tbody>
   </table>`;
@@ -2745,16 +2821,6 @@ function updateSessionSheetStatus() {
     document.getElementById('bb-session-label').textContent = 'Sesión';
     document.getElementById('bb-session').classList.remove('active');
   }
-}
-
-function switchUserMobile() {
-  var mSel = document.getElementById('user-select-mobile');
-  var dSel = document.getElementById('user-select');
-  dSel.value = mSel.value;
-  switchUser();
-  updateSessionSheetStatus();
-  // Close sheet after 600ms so user sees feedback
-  setTimeout(closeAllSheets, 600);
 }
 
 // Filter sheet
