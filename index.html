@@ -708,7 +708,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .mobile-session-sheet { display: none; }
 .mobile-filter-sheet  { display: none; }
 .sheet-overlay        { display: none; }
-.mobile-back-btn      { display: none; }
+@media (min-width: 769px) { .mobile-back-btn { display: none; } }
 @media (max-width: 768px) {
   .bottom-bar {
     display: flex;
@@ -1985,7 +1985,7 @@ function showUsuarios() {
       renderUsuariosList();
     } else {
       title.textContent = 'Mi cuenta';
-      note.textContent  = `Usuario: ${me ? me.nombre : ''} · ${ROL_LABEL[me?.rol]||''}`;
+      note.textContent  = `Usuario: ${me ? me.nombre : ''} · ${me ? (ROL_LABEL[me.rol]||'') : ''}`;
       // Clear self-change fields
       document.getElementById('self-pass-old').value   = '';
       document.getElementById('self-pass-new').value   = '';
@@ -2262,7 +2262,7 @@ function renderList() {
         ${hasAlrg?'<span class="tag tag-alergia">ALERGIA</span>':''}
         ${hasPend?'<span class="tag tag-pendiente">PENDIENTE</span>':''}
         ${visited
-          ? `<span class="tag tag-visitado">✓ ${escHtml(lastVisit.ts.split(', ')[1]?.slice(0,5)||'visitado')}</span>`
+          ? `<span class="tag tag-visitado">✓ ${escHtml((lastVisit.ts.split(', ')[1]||'').slice(0,5)||'visitado')}</span>`
           : `<span class="tag tag-sinvisita">Sin visita</span>`}
       </div>
     </div>`;
@@ -2810,7 +2810,7 @@ function truncate(str, n) {
 // ── DOWNLOAD CSV ──────────────────────────────────────────────────────────────
 function downloadCSV() {
   const entries = getFilteredLogEntries();
-  const today   = new Date().toLocaleDateString('es-AR').replaceAll('/','_');
+  const today   = new Date().toLocaleDateString('es-AR').split('/').join('_');
   const header  = ['Hora','Usuario','Cama','Servicio','Paciente','Tipo de cambio','Campo','Valor anterior','Valor nuevo'];
   const rows    = entries.map(e => [
     e.ts,
@@ -2825,7 +2825,7 @@ function downloadCSV() {
   ]);
 
   const csv = [header, ...rows].map(row =>
-    row.map(cell => `"${String(cell).replaceAll('"','""')}"`).join(',')
+    row.map(cell => `"${String(cell).split('"').join('""')}"`).join(',')
   ).join('\r\n');
 
   const bom  = '\uFEFF'; // UTF-8 BOM for Excel
