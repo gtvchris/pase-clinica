@@ -853,7 +853,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
       Cerrar sesión
     </button>
     <button class="log-btn" onclick="showLog()">Log del día</button>
-    <button class="log-btn" onclick="exportarPDF()" style="background:rgba(255,255,255,.22);">Exportar PDF</button>
+    <button class="log-btn" onclick="showNuevoPaciente()" style="background:rgba(255,255,255,.22);">+ Nuevo paciente</button>
+    <button class="log-btn" onclick="exportarPDF()" style="background:rgba(255,255,255,.15);">Exportar PDF</button>
     <button class="save-btn" id="save-btn" onclick="saveChanges()" disabled>Guardar cambios</button>
   </div>
 </div>
@@ -1056,6 +1057,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 
 <!-- MOBILE BOTTOM BAR -->
 <div class="bottom-bar" id="bottom-bar">
+  <!-- Nuevo paciente -->
+  <button class="bb-btn" onclick="showNuevoPaciente()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M19 8v6M22 11h-6"/></svg>
+    <span>Nuevo</span>
+  </button>
   <!-- Sesión -->
   <button class="bb-btn" id="bb-session" onclick="toggleSessionSheet()">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -1115,6 +1121,102 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <div class="mobile-filter-chip" onclick="setFilterMobile('sinvisita',this)">Sin visita hoy</div>
   </div>
   <button onclick="closeAllSheets()" style="width:100%;margin-top:14px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Aplicar</button>
+</div>
+
+<!-- NUEVO PACIENTE MODAL -->
+<div class="modal-overlay" id="nuevo-paciente-modal" onclick="closeNuevoPacienteOutside(event)">
+  <div class="modal" style="width:560px;max-width:97vw;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <span class="modal-title">Nuevo paciente</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Completá los datos y elegí la cama</div>
+      </div>
+      <button class="modal-close" onclick="closeNuevoPaciente()">✕</button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Cama -->
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">CAMA</div>
+        <select id="np-cama" class="login-input" style="cursor:pointer;font-size:14px;padding:9px 12px;">
+          <option value="">— Seleccionar cama libre —</option>
+        </select>
+      </div>
+
+      <!-- Nombre + Sexo -->
+      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">NOMBRE COMPLETO</div>
+          <input id="np-nombre" type="text" class="login-input" placeholder="APELLIDO, Nombre" style="font-size:14px;padding:9px 12px;text-transform:uppercase;">
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">SEXO</div>
+          <select id="np-sexo" class="login-input" style="cursor:pointer;font-size:14px;padding:9px 12px;width:90px;">
+            <option value="♀">♀ F</option>
+            <option value="♂">♂ M</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Edad + Ingreso -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">EDAD (años)</div>
+          <input id="np-edad" type="number" min="0" max="130" class="login-input" placeholder="ej: 72" style="font-size:14px;padding:9px 12px;">
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">FECHA DE INGRESO</div>
+          <input id="np-ingreso" type="text" class="login-input" placeholder="ej: 07/04" style="font-size:14px;padding:9px 12px;">
+        </div>
+      </div>
+
+      <!-- Diagnóstico -->
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">DIAGNÓSTICO</div>
+        <textarea id="np-diag" class="field-edit" rows="2" placeholder="Diagnóstico principal"></textarea>
+      </div>
+
+      <!-- Antecedentes -->
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">ANTECEDENTES</div>
+        <textarea id="np-antec" class="field-edit" rows="2" placeholder="Antecedentes patológicos relevantes"></textarea>
+      </div>
+
+      <!-- Medicación -->
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">MEDICACIÓN HABITUAL</div>
+        <textarea id="np-med" class="field-edit" rows="2" placeholder="Medicación crónica"></textarea>
+      </div>
+
+      <!-- Alergias + ATB -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">ALERGIAS</div>
+          <input id="np-alergias" type="text" class="login-input" value="No refiere" style="font-size:14px;padding:9px 12px;">
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:6px;">ANTIBIÓTICOS</div>
+          <input id="np-atb" type="text" class="login-input" placeholder="No" style="font-size:14px;padding:9px 12px;">
+        </div>
+      </div>
+
+      <!-- Pendientes -->
+      <div>
+        <div class="field-label" style="margin-bottom:6px;">PENDIENTES</div>
+        <textarea id="np-pendientes" class="field-edit" rows="2" placeholder="Estudios, interconsultas, etc."></textarea>
+      </div>
+
+      <div id="np-error" style="color:var(--danger);font-size:13px;min-height:18px;"></div>
+    </div>
+
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;">
+      <button class="confirm-cancel" onclick="closeNuevoPaciente()">Cancelar</button>
+      <button onclick="confirmarNuevoPaciente()" style="background:var(--ok);color:#fff;border:none;border-radius:6px;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+        ✓ Ingresar paciente
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- LOGIN MODAL -->
@@ -2057,6 +2159,10 @@ function renderDetail() {
     </div>
 
     <div class="fields-grid">
+      ${fieldBlock('nombre','NOMBRE DEL PACIENTE',p.nombre,'full',false)}
+      ${fieldBlock('sexo','SEXO',p.sexo,'',false)}
+      ${fieldBlock('edad','EDAD (años)',String(p.edad||''),'',false)}
+      ${fieldBlock('ingreso','FECHA DE INGRESO',p.ingreso,'',false)}
       ${fieldBlock('diag','DIAGNÓSTICO',p.diag,'full',true)}
       ${fieldBlock('antec','ANTECEDENTES',p.antec,'full',true)}
       ${fieldBlock('med','MEDICACIÓN HABITUAL',p.med,'full',true)}
@@ -2131,15 +2237,17 @@ function commitChanges() {
   const ts = new Date().toLocaleString('es-AR');
   if (!history[p.id]) history[p.id] = [];
 
-  // also check novedades textarea
+  // Capture novedades textarea
   const novedEl = document.getElementById('edit-novedades');
   if (novedEl) pendingChanges['novedades'] = novedEl.value;
 
   Object.entries(pendingChanges).forEach(([field, newVal]) => {
-    const before = p[field]||'';
-    if (before !== newVal) {
-      history[p.id].unshift({ts, user: currentUser, field, before, after: newVal});
-      p[field] = newVal;
+    const coerced = field === 'edad' ? (parseInt(newVal, 10) || newVal) : newVal;
+    const before  = String(p[field] !== undefined ? p[field] : '');
+    const after   = String(coerced);
+    if (before !== after) {
+      history[p.id].unshift({ts, user: currentUser, field, before, after});
+      p[field] = coerced;
     }
   });
 
@@ -2150,7 +2258,6 @@ function commitChanges() {
   renderList();
   showToast('Cambios guardados correctamente');
 }
-
 function saveChanges() { commitChanges(); }
 
 // ── HISTORY MODAL ─────────────────────────────────────────────────────────────
@@ -2758,6 +2865,102 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── NUEVO PACIENTE ────────────────────────────────────────────────────────────
+function showNuevoPaciente() {
+  if (!currentUser) { showToast('Seleccioná un usuario antes de ingresar un paciente'); return; }
+
+  // Populate free beds
+  const sel = document.getElementById('np-cama');
+  const freeBeds = patients.filter(function(p){ return p.libre; });
+  sel.innerHTML = '<option value="">— Seleccionar cama libre —</option>' +
+    freeBeds.map(function(p){
+      return '<option value="' + escHtml(p.id) + '">' + escHtml(p.cama) + ' — ' + escHtml(wardLabel(p.ward)) + '</option>';
+    }).join('');
+
+  if (freeBeds.length === 0) {
+    showToast('No hay camas libres disponibles');
+    return;
+  }
+
+  // Reset form
+  ['np-nombre','np-edad','np-ingreso','np-diag','np-antec','np-med','np-pendientes'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('np-alergias').value = 'No refiere';
+  document.getElementById('np-atb').value = '';
+  document.getElementById('np-sexo').value = '♀';
+  document.getElementById('np-error').textContent = '';
+
+  // Default ingreso to today
+  const hoy = new Date().toLocaleDateString('es-AR').split('/');
+  document.getElementById('np-ingreso').value = hoy[0] + '/' + hoy[1];
+
+  document.getElementById('nuevo-paciente-modal').classList.add('open');
+  setTimeout(function(){ document.getElementById('np-nombre').focus(); }, 120);
+}
+
+function closeNuevoPaciente() {
+  document.getElementById('nuevo-paciente-modal').classList.remove('open');
+}
+
+function closeNuevoPacienteOutside(e) {
+  if (e.target === document.getElementById('nuevo-paciente-modal')) closeNuevoPaciente();
+}
+
+function confirmarNuevoPaciente() {
+  const errEl   = document.getElementById('np-error');
+  errEl.textContent = '';
+
+  const camaId  = document.getElementById('np-cama').value;
+  const nombre  = document.getElementById('np-nombre').value.trim().toUpperCase();
+  const sexo    = document.getElementById('np-sexo').value;
+  const edad    = parseInt(document.getElementById('np-edad').value, 10);
+  const ingreso = document.getElementById('np-ingreso').value.trim();
+  const diag    = document.getElementById('np-diag').value.trim();
+  const antec   = document.getElementById('np-antec').value.trim();
+  const med     = document.getElementById('np-med').value.trim();
+  const alergias= document.getElementById('np-alergias').value.trim() || 'No refiere';
+  const atb     = document.getElementById('np-atb').value.trim() || 'No';
+  const pend    = document.getElementById('np-pendientes').value.trim();
+
+  if (!camaId)  { errEl.textContent = 'Seleccioná una cama.'; return; }
+  if (!nombre)  { errEl.textContent = 'El nombre del paciente es obligatorio.'; return; }
+  if (!ingreso) { errEl.textContent = 'Ingresá la fecha de ingreso.'; return; }
+
+  const p = patients.find(function(x){ return x.id === camaId; });
+  if (!p || !p.libre) { errEl.textContent = 'La cama ya no está disponible.'; return; }
+
+  const ts = new Date().toLocaleString('es-AR');
+  if (!history[p.id]) history[p.id] = [];
+  history[p.id].unshift({
+    ts: ts, user: currentUser, field: 'estado',
+    before: 'Libre',
+    after: 'Nuevo ingreso — ' + nombre
+  });
+
+  // Populate bed with patient data
+  delete p.libre;
+  p.nombre    = nombre;
+  p.sexo      = sexo;
+  p.edad      = isNaN(edad) ? '' : edad;
+  p.ingreso   = ingreso;
+  p.diag      = diag;
+  p.antec     = antec;
+  p.med       = med;
+  p.alergias  = alergias;
+  p.atb       = atb;
+  p.pendientes= pend;
+  p.novedades = '';
+
+  closeNuevoPaciente();
+  currentPatient = p;
+  renderList();
+  renderDetail();
+  selectPatient(p.id);
+  showToast('Paciente ' + nombre + ' ingresado en cama ' + p.cama);
+  if (typeof window._syncPush === 'function') window._syncPush();
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
