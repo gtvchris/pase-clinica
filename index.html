@@ -2189,40 +2189,42 @@ let _confirmCallback = null;
 
 function toggleLibre(id) {
   if (!currentUser) { showToast('Seleccioná un usuario antes de hacer cambios'); return; }
-  const p = patients.find(x=>x.id===id);
+  var p = patients.find(function(x){ return x.id===id; });
   if (p.libre) {
-    // Mark as occupied — just flip the flag and clear the libre state
     showConfirm(
-      `Marcar cama ${p.cama} como ocupada`,
-      `La cama quedará disponible para asignar un nuevo paciente. Podés completar los datos desde el panel de edición.`,
+      'Marcar cama ' + p.cama + ' como ocupada',
+      'La cama quedará disponible para asignar un nuevo paciente. Podés completar los datos desde el panel de edición.',
       'Confirmar', 'ok',
-      () => {
-        const ts = new Date().toLocaleString('es-AR');
+      function() {
+        var ts = new Date().toLocaleString('es-AR');
         if (!history[p.id]) history[p.id] = [];
-        history[p.id].unshift({ts, user: currentUser, field:'estado', before:'Libre', after:'Ocupada'});
+        history[p.id].unshift({ts:ts, user:currentUser, field:'estado', before:'Libre', after:'Ocupada'});
         delete p.libre;
-        p.nombre = 'NUEVO PACIENTE'; p.diag=''; p.antec=''; p.med=''; p.alergias='No refiere'; p.atb=''; p.pendientes=''; p.novedades='';
-        renderList(); renderDetail(); showToast(`Cama ${p.cama} marcada como ocupada`);
+        p.nombre='NUEVO PACIENTE'; p.diag=''; p.antec=''; p.med=''; p.alergias='No refiere'; p.atb=''; p.pendientes=''; p.novedades='';
+        renderList(); renderDetail();
+        showToast('Cama ' + p.cama + ' marcada como ocupada');
+        if (typeof window._syncPush === 'function') window._syncPush();
       }
     );
   } else {
     showConfirm(
-      `Marcar cama ${p.cama} como libre`,
-      `Esto indicará que la cama está desocupada. Los datos del paciente actual quedarán registrados en el historial.`,
+      'Marcar cama ' + p.cama + ' como libre',
+      'Esto indicará que la cama está desocupada. Los datos del paciente actual quedarán registrados en el historial.',
       'Marcar libre', 'danger',
-      () => {
-        const ts = new Date().toLocaleString('es-AR');
+      function() {
+        var ts = new Date().toLocaleString('es-AR');
         if (!history[p.id]) history[p.id] = [];
-        history[p.id].unshift({ts, user: currentUser, field:'estado', before:`Ocupada — ${p.nombre}`, after:'Libre'});
+        history[p.id].unshift({ts:ts, user:currentUser, field:'estado', before:'Ocupada — '+p.nombre, after:'Libre'});
         p.libre = true;
         editing = false; pendingChanges = {};
         document.getElementById('save-btn').disabled = true;
-        renderList(); renderDetail(); showToast(`Cama ${p.cama} marcada como libre`);
+        renderList(); renderDetail();
+        showToast('Cama ' + p.cama + ' marcada como libre');
+        if (typeof window._syncPush === 'function') window._syncPush();
       }
     );
   }
 }
-
 function showConfirm(title, body, okLabel, okClass, callback) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-body').textContent = body;
@@ -3103,7 +3105,7 @@ populateLoginSelect();
 // Conectar Supabase en segundo plano
 setTimeout(function() {
   [
-    'commitChanges', 'toggleLibre', 'ejecutarTraslado', 'marcarVisitado',
+    'commitChanges', 'ejecutarTraslado', 'marcarVisitado',
     'guardarUsuario', 'toggleUsuario', 'eliminarUsuario',
     'cambiarPropiaPass', 'resetPass',
   ].forEach(patchFn);
