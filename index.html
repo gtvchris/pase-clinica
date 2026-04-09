@@ -84,6 +84,14 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .logo { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: 0.05em; opacity: 0.9; }
 .header-date { font-size: 12px; opacity: 0.65; font-family: var(--mono); }
 .header-right { display: flex; align-items: center; gap: 12px; }
+.user-menu-item {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 12px; font-size: 13px; font-family: var(--sans);
+  color: var(--text); background: none; border: none; cursor: pointer;
+  border-radius: 6px; transition: background .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.user-menu-item:hover, .user-menu-item:active { background: var(--surface2); }
 .header-actions-desktop { display: flex; align-items: center; gap: 8px; }
 .header-username { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .header-action-btn {
@@ -853,13 +861,29 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
     <div class="header-date" id="header-date"></div>
   </div>
   <div class="header-right">
-    <div class="user-badge" style="cursor:default;">
-      <div class="user-avatar" id="user-initials">—</div>
-      <span id="user-name-display" class="header-username">Sin sesión</span>
+    <!-- User dropdown -->
+    <div id="user-menu-wrap" style="position:relative;">
+      <div class="user-badge" id="user-badge-btn" onclick="toggleUserMenu()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;">
+        <div class="user-avatar" id="user-initials">—</div>
+        <span id="user-name-display" class="header-username">Sin sesión</span>
+        <svg id="user-chevron" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="opacity:.65;flex-shrink:0;transition:transform .2s;"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div id="user-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:210px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.15);z-index:500;overflow:hidden;">
+        <div id="user-menu-info" style="padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);">
+          <div id="user-menu-name" style="font-weight:600;font-size:13px;color:var(--text);"></div>
+          <div id="user-menu-role" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+        </div>
+        <div style="padding:6px;">
+          <button class="user-menu-item" onclick="closeUserMenu();showCambiarPass();">🔑 Cambiar contraseña</button>
+          <div id="user-menu-admin-items" style="display:none;">
+            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+            <button class="user-menu-item" onclick="closeUserMenu();showUsuarios();">⚙ Administrar usuarios</button>
+          </div>
+          <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+          <button class="user-menu-item" style="color:var(--danger);" onclick="closeUserMenu();applyLogout();">↩ Cerrar sesión</button>
+        </div>
+      </div>
     </div>
-    <button id="logout-btn" onclick="applyLogout()" title="Cerrar sesión" class="header-action-btn" style="display:none;">
-      Cerrar sesión
-    </button>
     <div class="header-actions-desktop">
       <button class="log-btn" onclick="showNuevoPaciente()">+ Nuevo</button>
       <button class="log-btn" id="header-docx-btn" onclick="showDocxImport()" style="display:none;">↑ DOCX</button>
@@ -1805,61 +1829,124 @@ function _resetSelect() {
   if (mSel) mSel.value = val;
 }
 
+// ── USER DROPDOWN MENU ────────────────────────────────────────────────────────
+function toggleUserMenu() {
+  if (!currentUser) return;
+  var menu = document.getElementById('user-menu');
+  var chev = document.getElementById('user-chevron');
+  var open = menu.style.display !== 'none';
+  if (open) {
+    menu.style.display = 'none';
+    chev.style.transform = '';
+  } else {
+    menu.style.display = 'block';
+    chev.style.transform = 'rotate(180deg)';
+    setTimeout(function() {
+      document.addEventListener('click', _closeMenuOutside, { once: true });
+    }, 10);
+  }
+}
+
+function closeUserMenu() {
+  var menu = document.getElementById('user-menu');
+  var chev = document.getElementById('user-chevron');
+  if (menu) menu.style.display = 'none';
+  if (chev) chev.style.transform = '';
+}
+
+function _closeMenuOutside(e) {
+  var wrap = document.getElementById('user-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) closeUserMenu();
+}
+
+function showCambiarPass() {
+  // Open the usuarios modal showing only the self-change-password view
+  var me = usuarios.find(function(u){ return u.id === currentUserId; });
+  if (!me) return;
+  var modal  = document.getElementById('usuarios-modal');
+  var adminV = document.getElementById('usuarios-admin-view');
+  var selfV  = document.getElementById('usuarios-self-view');
+  var noneV  = document.getElementById('usuarios-nosession-view');
+  var title  = document.getElementById('usuarios-modal-title');
+  var note   = document.getElementById('usuarios-admin-note');
+  adminV.style.display = 'none';
+  selfV.style.display  = 'none';
+  noneV.style.display  = 'none';
+  title.textContent = 'Cambiar contraseña';
+  note.textContent  = me.nombre;
+  document.getElementById('self-pass-old').value  = '';
+  document.getElementById('self-pass-new').value  = '';
+  document.getElementById('self-pass-new2').value = '';
+  document.getElementById('self-pass-error').textContent = '';
+  selfV.style.display = 'block';
+  modal.classList.add('open');
+}
+
 function _setAdminUI(isAdmin) {
-  // Mobile bottom bar buttons
+  // Mobile bottom bar
   var bbDocx     = document.getElementById('bb-docx');
   var bbUsuarios = document.getElementById('bb-usuarios');
   if (bbDocx)     bbDocx.style.display     = isAdmin ? 'flex' : 'none';
   if (bbUsuarios) bbUsuarios.style.display = isAdmin ? 'flex' : 'none';
   // Sidebar admin button
-  var sideAdmin  = document.getElementById('sidebar-admin-btn');
-  if (sideAdmin)  sideAdmin.style.display  = isAdmin ? 'block' : 'none';
-  // Desktop header DOCX and Versiones buttons
+  var sideAdmin = document.getElementById('sidebar-admin-btn');
+  if (sideAdmin) sideAdmin.style.display = isAdmin ? 'block' : 'none';
+  // Desktop header buttons
   var hdDocx = document.getElementById('header-docx-btn');
   var hdVer  = document.getElementById('header-ver-btn');
   if (hdDocx) hdDocx.style.display = isAdmin ? '' : 'none';
   if (hdVer)  hdVer.style.display  = isAdmin ? '' : 'none';
+  // User menu admin section
+  var adminItems = document.getElementById('user-menu-admin-items');
+  if (adminItems) adminItems.style.display = isAdmin ? 'block' : 'none';
 }
 
 function _applyLogin(u) {
   currentUser   = u.nombre;
   currentUserId = u.id;
-  var initials  = u.nombre.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
-  document.getElementById('user-initials').textContent      = initials;
-  document.getElementById('user-name-display').textContent  = u.nombre;
-  document.getElementById('logout-btn').style.display       = 'inline-block';
-
+  var initials = u.nombre.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+  document.getElementById('user-initials').textContent     = initials;
+  document.getElementById('user-name-display').textContent = u.nombre;
+  // Populate dropdown info
+  var nameEl = document.getElementById('user-menu-name');
+  var roleEl = document.getElementById('user-menu-role');
+  if (nameEl) nameEl.textContent = u.nombre;
+  if (roleEl) roleEl.textContent = { admin:'Administrador', medico:'Médico', enfermeria:'Enfermería' }[u.rol] || u.rol;
+  // Legacy logout btn (may not exist anymore)
+  var logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.style.display = 'inline-block';
   // Show/hide admin-only UI
   _setAdminUI(u.rol === 'admin');
-
-  // Sync both selects
+  // Sync selects
   document.getElementById('user-select').value = u.id;
   var mSel = document.getElementById('user-select-mobile');
   if (mSel) mSel.value = u.id;
-
   if (_loginFromMobile) {
     updateSessionSheetStatus();
     setTimeout(closeAllSheets, 500);
   }
-
   showToast('Bienvenido/a, ' + u.nombre);
   renderList();
   if (currentPatient) renderDetail();
 }
 
 function applyLogout() {
+  closeUserMenu();
   currentUser   = '';
   currentUserId = null;
   document.getElementById('user-initials').textContent     = '—';
   document.getElementById('user-name-display').textContent = 'Sin sesión';
-  document.getElementById('logout-btn').style.display      = 'none';
-  // Hide all admin-only UI
+  var nameEl = document.getElementById('user-menu-name');
+  var roleEl = document.getElementById('user-menu-role');
+  if (nameEl) nameEl.textContent = '';
+  if (roleEl) roleEl.textContent = '';
+  var logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.style.display = 'none';
   _setAdminUI(false);
   document.getElementById('user-select').value = '';
   var mSel = document.getElementById('user-select-mobile');
   if (mSel) mSel.value = '';
   if (typeof updateSessionSheetStatus === 'function') updateSessionSheetStatus();
-  // Volver a la pantalla de login
   var screen = document.getElementById('login-screen');
   var shell  = document.getElementById('app-shell');
   document.getElementById('ls-user').value          = '';
