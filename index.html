@@ -190,7 +190,30 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
 .patient-cama { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.04em; }
 .patient-name { font-weight: 600; font-size: 13px; line-height: 1.3; }
 .patient-diag { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tag-row { display: flex; gap: 4px; margin-top: 2px; flex-wrap: wrap; }
+.tag-row { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.patient-novedad {
+  font-size: 11px; color: var(--accent); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-style: italic; opacity: .85;
+}
+.btn-novedad-rapida {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: none; border: 1.5px solid var(--border);
+  color: var(--muted); font-size: 18px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; margin-left: 6px; margin-top: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-novedad-rapida:hover, .btn-novedad-rapida:active {
+  background: var(--accent-light); border-color: var(--accent); color: var(--accent);
+}
+.filter-badge {
+  display: inline-block; background: var(--accent); color: #fff;
+  border-radius: 10px; font-size: 10px; font-weight: 700;
+  padding: 0 5px; min-width: 16px; text-align: center;
+  margin-left: 3px; line-height: 16px; vertical-align: middle;
+}
+.filter-badge:empty { display: none; }
 .tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; font-family: var(--mono); }
 .tag-atb { background: #fff3cd; color: #856404; }
 .tag-alergia { background: #fce8e8; color: #9b2335; }
@@ -918,11 +941,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   </div>
   <div class="filter-group">
     <button class="filter-btn active" onclick="setFilter('todos', this)">Todos</button>
+    <button class="filter-btn" onclick="setFilter('sinvisita', this)" id="filter-sinvisita">Sin visita <span id="badge-sinvisita" class="filter-badge"></span></button>
     <button class="filter-btn" onclick="setFilter('ocupadas', this)">Ocupadas</button>
     <button class="filter-btn" onclick="setFilter('libres', this)">Libres</button>
-    <button class="filter-btn" onclick="setFilter('atb', this)">Con antibióticos</button>
-    <button class="filter-btn" onclick="setFilter('pendientes', this)">Con pendientes</button>
-    <button class="filter-btn" onclick="setFilter('sinvisita', this)">Sin visita hoy</button>
+    <button class="filter-btn" onclick="setFilter('atb', this)">ATB <span id="badge-atb" class="filter-badge"></span></button>
+    <button class="filter-btn" onclick="setFilter('pendientes', this)">Pendientes <span id="badge-pend" class="filter-badge"></span></button>
   </div>
   <div class="stats-row">
     <div class="stat"><strong id="stat-total">0</strong> camas</div>
@@ -1198,13 +1221,32 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 8px;">Estado</div>
   <div class="mobile-filter-grid" id="status-chips">
     <div class="mobile-filter-chip active" onclick="setFilterMobile('todos',this)">Todos</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('sinvisita',this)">Sin visita hoy</div>
     <div class="mobile-filter-chip" onclick="setFilterMobile('ocupadas',this)">Ocupadas</div>
     <div class="mobile-filter-chip" onclick="setFilterMobile('libres',this)">Libres</div>
-    <div class="mobile-filter-chip" onclick="setFilterMobile('atb',this)">Con antibióticos</div>
-    <div class="mobile-filter-chip" onclick="setFilterMobile('pendientes',this)">Con pendientes</div>
-    <div class="mobile-filter-chip" onclick="setFilterMobile('sinvisita',this)">Sin visita hoy</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('atb',this)">Con ATB</div>
+    <div class="mobile-filter-chip" onclick="setFilterMobile('pendientes',this)">Pendientes</div>
   </div>
   <button onclick="closeAllSheets()" style="width:100%;margin-top:14px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);">Aplicar</button>
+</div>
+
+<!-- NOVEDAD RÁPIDA MODAL -->
+<div class="confirm-overlay" id="novedad-rapida-overlay" onclick="if(event.target===this)cerrarNovedadRapida()">
+  <div class="confirm-box" style="width:420px;">
+    <div class="confirm-title">＋ Agregar novedad</div>
+    <div id="novedad-rapida-cama" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+    <textarea id="novedad-rapida-input"
+      style="width:100%;min-height:90px;padding:10px 12px;font-size:14px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);outline:none;resize:vertical;transition:border-color .15s;"
+      placeholder="Escribí la novedad o evolución del día…"
+      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+      onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))guardarNovedadRapida()"></textarea>
+    <div id="novedad-rapida-error" style="font-size:12px;color:var(--danger);min-height:18px;margin-top:4px;"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">Se guardará con hora y tu nombre. Ctrl+Enter para guardar.</div>
+    <div class="confirm-actions" style="margin-top:16px;">
+      <button class="confirm-cancel" onclick="cerrarNovedadRapida()">Cancelar</button>
+      <button class="confirm-ok ok" onclick="guardarNovedadRapida()">Guardar novedad</button>
+    </div>
+  </div>
 </div>
 
 <!-- IMPORTAR DOCX MODAL -->
@@ -2304,16 +2346,24 @@ function renderList() {
     const hasAlrg  = p.alergias && p.alergias!=='No refiere' && p.alergias!=='No registrada';
     const visited  = hasBeenVisited(p.id);
     const lastVisit = visited ? visits[p.id][0] : null;
+    const primeraLinea = (p.novedades||'').split('\n').find(l=>l.trim() && l.trim()!=='---');
+    const visitHour = visited && lastVisit.ts.split(', ')[1] ? lastVisit.ts.split(', ')[1].slice(0,5) : 'visitado';
     return `<div class="patient-card ${isActive}${visited ? '' : ' card-sinvisita'}" onclick="selectPatient('${escHtml(p.id)}')">
-      <div class="patient-cama">CAMA ${escHtml(p.cama)}</div>
-      <div class="patient-name">${escHtml(p.nombre)}</div>
-      <div class="patient-diag">${escHtml(p.diag||'')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="min-width:0;flex:1;">
+          <div class="patient-cama">CAMA ${escHtml(p.cama)}</div>
+          <div class="patient-name">${escHtml(p.nombre)}</div>
+          <div class="patient-diag">${escHtml(p.diag||'')}</div>
+          ${primeraLinea ? `<div class="patient-novedad">↳ ${escHtml(primeraLinea)}</div>` : ''}
+        </div>
+        <button class="btn-novedad-rapida" onclick="event.stopPropagation();novedad_rapida('${escHtml(p.id)}')" title="Agregar novedad">＋</button>
+      </div>
       <div class="tag-row">
-        ${hasAtb ?'<span class="tag tag-atb">Antibióticos</span>':''}
-        ${hasAlrg?'<span class="tag tag-alergia">ALERGIA</span>':''}
+        ${hasAtb ?'<span class="tag tag-atb">ATB</span>':''}
+        ${hasAlrg?'<span class="tag tag-alergia">⚠ ALERGIA</span>':''}
         ${hasPend?'<span class="tag tag-pendiente">PENDIENTE</span>':''}
         ${visited
-          ? `<span class="tag tag-visitado">✓ ${escHtml(lastVisit.ts.split(', ')[1]?.slice(0,5)||'visitado')}</span>`
+          ? `<span class="tag tag-visitado">✓ ${escHtml(visitHour)}</span>`
           : `<span class="tag tag-sinvisita">Sin visita</span>`}
       </div>
     </div>`;
@@ -2323,17 +2373,27 @@ function renderList() {
 
 function updateStats() {
   const all = patients;
-  const ocu = all.filter(p=>!p.libre).length;
+  const ocu = all.filter(function(p){ return !p.libre; });
   document.getElementById('stat-total').textContent = all.length;
-  document.getElementById('stat-ocu').textContent = ocu;
-  document.getElementById('stat-libre').textContent = all.length - ocu;
+  document.getElementById('stat-ocu').textContent = ocu.length;
+  document.getElementById('stat-libre').textContent = all.length - ocu.length;
   const wards = {piso1:0,uco:0,obs:0,pb:0};
-  all.forEach(p=>{ if(wards[p.ward]!==undefined) wards[p.ward]++; });
+  all.forEach(function(p){ if(wards[p.ward]!==undefined) wards[p.ward]++; });
   document.getElementById('wc-todos').textContent = all.length;
   document.getElementById('wc-piso1').textContent = wards.piso1;
   document.getElementById('wc-uco').textContent = wards.uco;
   document.getElementById('wc-obs').textContent = wards.obs;
   document.getElementById('wc-pb').textContent = wards.pb;
+  // Badges en filtros
+  var sinVisita = ocu.filter(function(p){ return !hasBeenVisited(p.id); }).length;
+  var conAtb    = ocu.filter(function(p){ return p.atb && p.atb!=='No' && p.atb!=='---' && p.atb!==''; }).length;
+  var conPend   = ocu.filter(function(p){ return p.pendientes && p.pendientes!=='---' && p.pendientes!==''; }).length;
+  var bsv = document.getElementById('badge-sinvisita');
+  var batb = document.getElementById('badge-atb');
+  var bpend = document.getElementById('badge-pend');
+  if (bsv)   bsv.textContent   = sinVisita > 0 ? sinVisita : '';
+  if (batb)  batb.textContent  = conAtb > 0 ? conAtb : '';
+  if (bpend) bpend.textContent = conPend > 0 ? conPend : '';
 }
 
 // ── SELECT PATIENT ────────────────────────────────────────────────────────────
@@ -3287,6 +3347,44 @@ function exportarDOCX() {
   }).catch(function(e) {
     showToast('Error al generar DOCX: ' + e.message);
   });
+}
+
+// ── NOVEDAD RÁPIDA ────────────────────────────────────────────────────────────
+var _novedadRapidaId = null;
+function novedad_rapida(id) {
+  if (!currentUser) { showToast('Seleccioná un usuario primero'); return; }
+  _novedadRapidaId = id;
+  var p = patients.find(function(x){ return x.id === id; });
+  if (!p) return;
+  document.getElementById('novedad-rapida-cama').textContent = 'Cama ' + p.cama + ' — ' + p.nombre;
+  document.getElementById('novedad-rapida-input').value = '';
+  document.getElementById('novedad-rapida-error').textContent = '';
+  document.getElementById('novedad-rapida-overlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('novedad-rapida-input').focus(); }, 120);
+}
+
+function guardarNovedadRapida() {
+  var texto = document.getElementById('novedad-rapida-input').value.trim();
+  if (!texto) { document.getElementById('novedad-rapida-error').textContent = 'Escribí la novedad primero.'; return; }
+  var p = patients.find(function(x){ return x.id === _novedadRapidaId; });
+  if (!p) return;
+  var ts = new Date().toLocaleString('es-AR');
+  var hora = ts.split(', ')[1] ? ts.split(', ')[1].slice(0,5) : '';
+  var autor = currentUser.split(' ')[0];
+  var entrada = '[' + hora + ' ' + autor + '] ' + texto;
+  p.novedades = p.novedades ? (p.novedades + '\n' + entrada) : entrada;
+  if (!history[p.id]) history[p.id] = [];
+  history[p.id].unshift({ts:ts, user:currentUser, field:'novedades', before:'', after:texto});
+  cerrarNovedadRapida();
+  renderList();
+  if (currentPatient && currentPatient.id === p.id) renderDetail();
+  showToast('Novedad agregada');
+  if (typeof window._syncPush === 'function') window._syncPush();
+}
+
+function cerrarNovedadRapida() {
+  document.getElementById('novedad-rapida-overlay').classList.remove('open');
+  _novedadRapidaId = null;
 }
 
 // ── NUEVO PACIENTE ────────────────────────────────────────────────────────────
