@@ -66,6 +66,51 @@
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'IBM Plex Sans', sans-serif;
 }
+
+/* ── MODO OSCURO ── */
+body.dark-mode {
+  --bg: #111318;
+  --surface: #1c2030;
+  --surface2: #252a3a;
+  --border: #2e3448;
+  --text: #e8e9ed;
+  --muted: #8b90a0;
+  --accent: #4d80c8;
+  --accent-light: #1a2540;
+  --danger: #e05a6a;
+  --danger-light: #2a1520;
+  --warn: #d4a020;
+  --warn-light: #2a2010;
+  --ok: #3aad6a;
+  --ok-light: #0e2a1a;
+  --libre: #666870;
+}
+body.dark-mode .header { background: #0d1525; }
+body.dark-mode .login-card { background: var(--surface); }
+body.dark-mode #login-screen { background: #0d1525; }
+body.dark-mode .user-menu-item:hover { background: var(--surface2); }
+body.dark-mode input, body.dark-mode textarea, body.dark-mode select {
+  color-scheme: dark;
+}
+
+/* ── BOTÓN MODO OSCURO ── */
+.dark-toggle {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  color: rgba(255,255,255,.7); font-size: 16px; line-height: 1;
+  border-radius: 6px; transition: all .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.dark-toggle:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+/* ── SWIPE HINT ── */
+.swipe-hint {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 60px; display: flex; align-items: center; justify-content: center;
+  background: var(--ok); color: #fff; font-size: 20px;
+  border-radius: 0 4px 4px 0; opacity: 0;
+  pointer-events: none; transition: opacity .15s;
+}
+.patient-card { position: relative; overflow: hidden; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
 
@@ -915,6 +960,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
       </div>
     </div>
     <div class="header-actions-desktop">
+      <button class="dark-toggle" id="dark-toggle-btn" onclick="toggleDarkMode()" title="Modo oscuro">🌙</button>
       <button class="log-btn" onclick="showNuevoPaciente()">+ Nuevo</button>
       <button class="log-btn" id="header-ver-btn" onclick="showVersiones()" style="display:none;">🕐 Versiones</button>
       <button class="log-btn" onclick="showLog()">Log</button>
@@ -1135,6 +1181,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); font
   <button class="bb-btn" id="bb-inicio" onclick="volverInicio()">
     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <span>Inicio</span>
+  </button>
+  <!-- Modo oscuro -->
+  <button class="bb-btn" id="dark-toggle-mobile" onclick="toggleDarkMode()">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <span>Modo</span>
   </button>
   <!-- Nuevo paciente -->
   <button class="bb-btn" onclick="showNuevoPaciente()">
@@ -1673,6 +1724,9 @@ function init() {
   populateLoginSelect();
   updateStats();
   renderList();
+  initDarkMode();
+  // Swipe init after a tick so list-pane is populated
+  setTimeout(initSwipe, 500);
   // Mostrar login screen de inmediato — Supabase carga en segundo plano
 }
 
@@ -2349,6 +2403,7 @@ function renderList() {
     const primeraLinea = (p.novedades||'').split('\n').find(l=>l.trim() && l.trim()!=='---');
     const visitHour = visited && lastVisit.ts.split(', ')[1] ? lastVisit.ts.split(', ')[1].slice(0,5) : 'visitado';
     return `<div class="patient-card ${isActive}${visited ? '' : ' card-sinvisita'}" onclick="selectPatient('${escHtml(p.id)}')">
+      <div class="swipe-hint">✓</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div style="min-width:0;flex:1;">
           <div class="patient-cama">CAMA ${escHtml(p.cama)}</div>
@@ -2359,7 +2414,7 @@ function renderList() {
         <button class="btn-novedad-rapida" onclick="event.stopPropagation();novedad_rapida('${escHtml(p.id)}')" title="Agregar novedad">＋</button>
       </div>
       <div class="tag-row">
-        ${hasAtb ?'<span class="tag tag-atb">ATB</span>':''}
+        ${hasAtb ? `<span class="tag tag-atb">ATB${p.atb_fi ? ' FI:'+p.atb_fi : ''}</span>` : ''}
         ${hasAlrg?'<span class="tag tag-alergia">⚠ ALERGIA</span>':''}
         ${hasPend?'<span class="tag tag-pendiente">PENDIENTE</span>':''}
         ${visited
@@ -2469,7 +2524,9 @@ function renderDetail() {
       ${fieldBlock('antec','ANTECEDENTES',p.antec,'full',true)}
       ${fieldBlock('med','MEDICACIÓN HABITUAL',p.med,'full',true)}
       ${fieldBlock('alergias','ALERGIAS',p.alergias,'',false,'alergia')}
-      ${fieldBlock('atb','ANTIBIÓTICOS',p.atb,'',false,'atb')}
+      ${fieldBlock('atb','ANTIBIÓTICO',p.atb,'',false,'atb')}
+      ${fieldBlock('atb_fi','FECHA INICIO (FI)',p.atb_fi||'','')}
+      ${fieldBlock('atb_ff','FECHA FIN (FF)',p.atb_ff||'','')}
       ${fieldBlock('pendientes','PENDIENTES',p.pendientes,'',true)}
     </div>
 
@@ -3928,6 +3985,91 @@ function restaurarVersion(id, label) {
   );
 }
 
+// ── MODO OSCURO ───────────────────────────────────────────────────────────────
+function initDarkMode() {
+  // Check saved preference, then system preference
+  var saved = localStorage.getItem('clinica-dark');
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var dark = saved !== null ? saved === '1' : prefersDark;
+  setDarkMode(dark);
+  // Listen for system changes
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      if (localStorage.getItem('clinica-dark') === null) setDarkMode(e.matches);
+    });
+  }
+}
+
+function setDarkMode(on) {
+  document.body.classList.toggle('dark-mode', on);
+  var btn = document.getElementById('dark-toggle-btn');
+  var mobBtn = document.getElementById('dark-toggle-mobile');
+  if (btn) btn.textContent = on ? '☀️' : '🌙';
+  if (mobBtn) mobBtn.textContent = on ? '☀️' : '🌙';
+}
+
+function toggleDarkMode() {
+  var on = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('clinica-dark', on ? '1' : '0');
+  var btn = document.getElementById('dark-toggle-btn');
+  var mobBtn = document.getElementById('dark-toggle-mobile');
+  if (btn) btn.textContent = on ? '☀️' : '🌙';
+  if (mobBtn) mobBtn.textContent = on ? '☀️' : '🌙';
+}
+
+// ── SWIPE PARA MARCAR VISITADO (mobile) ──────────────────────────────────────
+function initSwipe() {
+  var listPane = document.getElementById('list-pane');
+  if (!listPane) return;
+
+  var startX, startY, swipeEl, patientId;
+  var threshold = 80; // px para activar
+  var active = false;
+
+  listPane.addEventListener('touchstart', function(e) {
+    var card = e.target.closest('.patient-card');
+    if (!card || card.classList.contains('libre')) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    swipeEl = card;
+    patientId = card.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+    active = true;
+  }, { passive: true });
+
+  listPane.addEventListener('touchmove', function(e) {
+    if (!active || !swipeEl) return;
+    var dx = e.touches[0].clientX - startX;
+    var dy = e.touches[0].clientY - startY;
+    // Solo swipe horizontal
+    if (Math.abs(dy) > Math.abs(dx)) { active = false; return; }
+    if (dx < 0) { active = false; return; } // solo derecha
+    var pct = Math.min(dx / threshold, 1);
+    swipeEl.style.transform = 'translateX(' + (dx * 0.6) + 'px)';
+    // Mostrar hint de check
+    var hint = swipeEl.querySelector('.swipe-hint');
+    if (hint) hint.style.opacity = String(pct);
+  }, { passive: true });
+
+  listPane.addEventListener('touchend', function(e) {
+    if (!active || !swipeEl) return;
+    var dx = e.changedTouches[0].clientX - startX;
+    swipeEl.style.transform = '';
+    var hint = swipeEl.querySelector('.swipe-hint');
+    if (hint) hint.style.opacity = '0';
+    if (dx >= threshold && patientId) {
+      var p = patients.find(function(x){ return x.id === patientId; });
+      if (p && !p.libre) {
+        if (!hasBeenVisited(patientId)) {
+          marcarVisitado(patientId);
+        } else {
+          showToast(p.nombre + ' ya fue visitado hoy');
+        }
+      }
+    }
+    active = false; swipeEl = null; patientId = null;
+  }, { passive: true });
+}
+
 // ── START ─────────────────────────────────────────────────────────────────────
 init();
 
@@ -4106,9 +4248,13 @@ function setStatus(color, text, persist) {
   pillDot.style.background = color;
   pillLbl.textContent = text;
   pill.style.opacity = '1';
+  pill.style.transform = 'translateY(0)';
   clearTimeout(hideTimer);
   if (!persist) {
-    hideTimer = setTimeout(function(){ pill.style.opacity = '0'; }, 3000);
+    hideTimer = setTimeout(function(){
+      pill.style.opacity = '0';
+      pill.style.transform = 'translateY(-4px)';
+    }, 3000);
   }
 }
 
